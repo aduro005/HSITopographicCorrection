@@ -4,7 +4,7 @@
 # Objective: Adjust "templates" after they've been applied to scans obtained at
 #             each configuration so pixel indices better match each sample well
 # Author: Alyssa M. Duro
-# Last edited: 4/10/2023
+# Last edited: 6/13/2023
 # ---------------------------------------------------------------------------
 
 # ---------------------------------------------------------------------------
