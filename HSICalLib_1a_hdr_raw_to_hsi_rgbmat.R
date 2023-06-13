@@ -15,7 +15,7 @@
 
 #   1.a. Output template.RData with the row and column coordinates for every
 #        pixel within all 40 sample wells for all 98 configurations from
-#        rgbmat.RData inputs. 
+#        rgbmat.RData inputs.
 
 # 2. Output intensities for every wavelength for every pixel that occurs
 #    within a sample well from hsi.RData and template.RData inputs.
@@ -239,10 +239,10 @@ for ( a in 1 : length ( slope ) ) {
     # position that corresponds to the red wavelength 
     # which is position 280 in hsi * dimensions of hsi[3] / 600
     # then round to 0 digits (nearest whole number)
-    Rhold <- round ( ( 680 - 400 ) * dim ( hsi ) [3] / 600 , 0 ) # ~620 nm
+    Rhold <- round ( ( 680 - 400 ) * dim ( hsi ) [3] / 600 , 0 ) # ~674 nm
       
     # position that corresponds to the green wavelength 
-    Ghold <- round ( ( 545 - 400 ) * dim ( hsi ) [3] / 600 , 0 ) # ~514 nm
+    Ghold <- round ( ( 545 - 400 ) * dim ( hsi ) [3] / 600 , 0 ) # ~540 nm
       
     # position that corresponds to the blue wavelength
     Bhold <- round ( ( 440 - 400 ) * dim ( hsi ) [3] / 600 , 0 ) # ~431 nm
@@ -250,7 +250,7 @@ for ( a in 1 : length ( slope ) ) {
     # Store the RGB data and correct the high and low values in rgbmat
     rgbmat[,,1] <- hsi[,,Rhold]
     rgbmat[,,2] <- hsi[,,Ghold]
-    rgbmat[,,3] <- hsi[,,Bhold]
+    rgbmat[,,3] <- hsi[,,Bhold] 
     
     # capping normalized intensities between 0 and 1
     # if normalized intensity > 1, then assign it 1
