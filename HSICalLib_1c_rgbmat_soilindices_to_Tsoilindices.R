@@ -4,11 +4,11 @@
 # Objective: Apply "templates" to scans obtained at each configuration to 
 #             isolate spectra from row, column indices from each sample well
 # Author: Alyssa M. Duro
-# Last edited: 4/10/2023
+# Last edited: 6/13/2023
 # ---------------------------------------------------------------------------
 
 # ---------------------------------------------------------------------------
-# Goals
+# Goals:
 # ---------------------------------------------------------------------------
 
 # 1. Output sghsi and rgbmat.RData and rgbmat.tiff from .hdr and .raw inputs.
@@ -24,7 +24,7 @@
 #    each sample well for every wavelength.
 
 # ---------------------------------------------------------------------------
-# Load packages
+# Load packages:
 # ---------------------------------------------------------------------------
 
 # Run this each time you re-open the script. 
