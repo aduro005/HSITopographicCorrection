@@ -3,7 +3,7 @@
 # ---------------------------------------------------------------------------
 # Objective: reference & melted reference for each spectrum
 # Author: Alyssa M. Duro
-# Last edited: 4/10/2023
+# Last edited: 6/13/2023
 # ---------------------------------------------------------------------------
 
 # ---------------------------------------------------------------------------
@@ -23,6 +23,8 @@ load("../Output Files/HSICalLib_20230223_b1-b30_pga.RData")
 # ---------------------------------------------------------------------------
 # reference spectrum
 # ---------------------------------------------------------------------------
+
+# pga --> pga_refI same length, but spectra are the same for each configuration
 
 # New df to hold all the refs for all samples in pf
 refI <- data.frame()
@@ -140,3 +142,12 @@ for (i in 800:805) {
 #
 #
 # ---------------------------------------------------------------------------
+
+# ----------
+# output for Daniel 
+
+firedf_ref <- pga_refI[,c(1:4,8:486)]
+firedf_ref <- firedf_ref[which(pga_refI$archive=='GrayLab'),]
+firedf_ref <- firedf_ref %>% filter (slope==0&aspect==0)
+fireoutcsv <- paste ( "../Output Files/HSICalLib_FireSamples_spectral_SOC_reference.csv" , sep = "_" )
+write.csv(firedf_ref, file = paste(fireoutcsv))
