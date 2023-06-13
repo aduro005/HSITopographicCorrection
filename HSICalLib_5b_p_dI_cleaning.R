@@ -3,7 +3,7 @@
 # ---------------------------------------------------------------------------
 # Objective: Remove samples from p based on dI outliers
 # Author: Alyssa M. Duro
-# Last edited: 4/10/2023
+# Last edited: 6/13/2023
 # ---------------------------------------------------------------------------
 
 # ---------------------------------------------------------------------------
@@ -18,7 +18,7 @@ library(data.table) # as.data.table() for melt
 # ---------------------------------------------------------------------------
 
 load("../Output Files/HSICalLib_wavevec.RData") 
-load("../Output Files/HSICalLib_b1-b30_20230223_p_clean_obsI.RData")
+load("../Output Files/HSICalLib_20230223_b1-b30_p_clean_obsI.RData")
 
 # ---------------------------------------------------------------------------
 # Calculate dI from p_clean (similar to dI_calculation script)
@@ -178,7 +178,8 @@ for(a in 1:length(snum)) {
   dIclean <- p_clean_obsI_dI_melt %>% filter (slope==snum[a])
   
   outterms$slope[a] <- snum[a]
-  outterms$IQR[a] <- as.numeric(quantile(dIclean$dI)[4] - quantile(dIclean$dI)[2])
+  IQR <- as.numeric(quantile(dIclean$dI)[4] - quantile(dIclean$dI)[2])
+  outterms$IQR[a] <- IQR
   outterms$maxdI[a] <- as.numeric(quantile(dIclean$dI)[4] + (1.5*IQR))
   outterms$mindI[a] <- as.numeric(quantile(dIclean$dI)[2] - (1.5*IQR))
   
@@ -233,7 +234,7 @@ for (e in 1:length(bnum)) {
 
 close(pb)
 
-rm(list=c('dIclean3','dIclean4','dIclean5','dIclean6','mindI','maxdI','IQR','outterms'))
+rm(list=c('dIclean3','dIclean4','dIclean5','dIclean6','IQR','outterms'))
 
 save ( list = c ( 'dIoutliers' ) , 
        file = paste ("../Output Files/HSICalLib_20230223_b1-b30_dIoutliers.RData", 
@@ -243,7 +244,7 @@ save ( list = c ( 'dIoutliers' ) ,
 load("../Output Files/HSICalLib_20230223_b1-b30_dIoutliers.RData")
 
 # ----------
-# exclude samples if they contain dI outliers
+# exclude 7,163 samples (spectra) that contain dI outliers --> 107,486
 
 # rows in p_clean where p_clean$batchwellID is NOT in the outlier list
 p_gold <- p_clean_obsI[which(!is.element(p_clean_obsI$batchwellID, dIoutliers)),]
