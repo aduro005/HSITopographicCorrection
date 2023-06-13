@@ -3,7 +3,7 @@
 # ---------------------------------------------------------------------------
 # Objective: Remove samples from p based on obs outliers
 # Author: Alyssa M. Duro
-# Last edited: 4/10/2023
+# Last edited: 6/13/2023
 # ---------------------------------------------------------------------------
 
 # ---------------------------------------------------------------------------
@@ -22,7 +22,7 @@ load("../Output Files/HSICalLib_wavevec.RData")
 # ----------
 # total number of samples = 1180 x 14 aspects x 7 slopes = 115,640 spectra
 # -
-# 2 sample missing (709 & 650) = 1178 samples = 115,444 spectra (p)
+# 2 samples missing (709 & 650) = 1178 samples = 115,444 spectra (p)
 load("../Output Files/HSICalLib_b1_b30_p.RData")
 
 # ---------------------------------------------------------------------------
@@ -30,7 +30,7 @@ load("../Output Files/HSICalLib_b1_b30_p.RData")
 # ---------------------------------------------------------------------------
 
 # 3 configurations (imaging mistakes) removed 
-# 115,542 samples --> 115,404 (removes 40 samples)
+# 115,544 samples --> 115,404 (removes 40 samples)
 p <- p[-which(p$slope==30&p$aspect==75&p$batch==8),]
 
 # --> 115,364 (removes 40 samples)
@@ -88,7 +88,7 @@ p_clean_melt <- p_clean_melt %>% filter (slope!=0)
 IQR <- as.numeric(quantile(p_clean_melt$obsI)[4] - quantile(p_clean_melt$obsI)[2])
 maxobsI <- as.numeric(quantile(p_clean_melt$obsI)[4] + (1.5*IQR))
 
-# minobsI turns out to be negative, so I just used 0
+# minobsI turns out to be negative when calculated this way, so I just used 0
 #minobsI <- (p_clean_melt$obsI)[2] - (1.5*IQR) 
 minobsI <- 0
 
@@ -140,7 +140,7 @@ save ( list = c ( 'obsIoutliers' ) ,
 load("../Output Files/HSICalLib_20230223_b1-b30_obsIoutliers.RData")
 
 # ----------
-# exclude samples if they contain obsI outliers
+# exclude 115 samples (spectra) with obsI outliers --> 114,649 p_clean_obsI
 
 # Keep rows in p_clean where p_clean$batchwellID is NOT in the outlier list
 p_clean_obsI <- p_clean[which(!is.element(p_clean$batchwellID, obsIoutliers)),]
