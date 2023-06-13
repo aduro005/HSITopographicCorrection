@@ -3,7 +3,7 @@
 # ---------------------------------------------------------------------------
 # Objective: Correct aspect labels from p_gold
 # Author: Alyssa M. Duro
-# Last edited: 4/10/2023
+# Last edited: 6/13/2023
 # ---------------------------------------------------------------------------
 
 # ---------------------------------------------------------------------------
@@ -17,7 +17,7 @@ library(dplyr) # df %>% filter()
 # ---------------------------------------------------------------------------
 
 load("../Output Files/HSICalLib_wavevec.RData") 
-load("../Output Files/HSICalLib_b1-b30_202302233_p_gold.RData")
+load("../Output Files/HSICalLib_b1-b30_20230223_p_gold.RData")
 
 # ---------------------------------------------------------------------------
 # p aspect correction (98 --> 91 configurations per sample)
@@ -40,6 +40,11 @@ rm(list=c('a1','a2','i'))
 
 # ----------
 # Average the two spectra collected at 90 (90 & 270 both assigned aspect 90)
+
+# 1,178 soil samples - (1 spectrum per slope * 7 slopes) = 8,246 spectra removed
+
+# BUT 7,682 spectra actually removed because some 90 or 270 spectra removed 
+# during dI cleaning so p_gold --> p_gold_acor = 99,804 spectra after averaging
 
 # start the new pfc_acor df with all the aspects that don't need correcting
 p_gold_acor <- p_gold %>% filter (aspect!=90)
@@ -93,6 +98,35 @@ save ( list = c ( 'p_gold_acor' ) ,
 load("../Output Files/HSICalLib_20230223_b1-b30_p_gold_acor.RData")
 
 # ---------------------------------------------------------------------------
+# melt p_gold_acor
+# ---------------------------------------------------------------------------
+
+datatable <- p_gold_acor[,c(3,13:485)]
+
+names(datatable)[4:474] <- wavevec
+
+melt2 <- as.data.table(datatable)
+melt1 <- melt(melt2,
+              id.vars=colnames(melt2)[c(1:3)],
+              measure.vars=colnames(melt2)[4:474],
+              variable.name="wavelength", 
+              value.name="obsI") 
+
+# make wavelength numeric
+melt1$wavelength <- as.numeric(as.character(melt1$wavelength))
+
+p_gold_acor_melt <- melt1
+
+rm(list=c('melt1','melt2','datatable'))
+
+save ( list = c ( 'p_gold_acor_melt' ) , 
+       file = paste ("../Output Files/HSICalLib_20230223_b1-b30_p_gold_acor_melt.RData", 
+                     sep="") )
+
+# Load file that was just output
+load("../Output Files/HSICalLib_20230223_b1-b30_p_gold_acor_melt.RData")
+
+# ---------------------------------------------------------------------------
 # 
 #
 # ---------------------------------------------------------------------------
@@ -110,7 +144,7 @@ load("../Output Files/HSICalLib_20230223_b1-b30_p_gold_acor.RData")
 # compare I for each aspect pair at each slope (acor pvalue spectra is output)
 # ---------------------------------------------------------------------------
 
-#### start with 20221001_b1-b30_p_clean_obsI_melt
+#### start with b1-b30_p_clean_obsI_melt
 
 # grab the data for the aspect pair you want to compare
 pImelt_oa1 <- pImelt_o %>% filter(aspect==75) # change manually
