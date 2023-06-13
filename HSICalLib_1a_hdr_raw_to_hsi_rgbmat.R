@@ -46,7 +46,7 @@ fname <- paste ( wname , "Plots" , sep = "/" )
 oname <- paste ( wname , "Output Files" , sep = "/" )
 
 # ---------------------------------------------------------------------------
-# Set some global variables: 
+# Set some global variables:
 # ---------------------------------------------------------------------------
 
 # Add each date you scan to the vector "date"
