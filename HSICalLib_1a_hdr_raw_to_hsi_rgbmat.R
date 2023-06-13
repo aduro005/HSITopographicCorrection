@@ -4,7 +4,7 @@
 # Objective: Load in .raw and .hdr files (output from HSI) and output
 #             HSI array, RGB array, and RGB tiff
 # Author: Alyssa M. Duro and Daniel Hirmas
-# Last edited: 4/10/2023
+# Last edited: 6/13/2023
 # ---------------------------------------------------------------------------
 
 # ---------------------------------------------------------------------------
