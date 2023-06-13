@@ -3,7 +3,7 @@
 # ---------------------------------------------------------------------------
 # Objective: Calculate and output cosIL matrix
 # Author: Alyssa M. Duro
-# Last edited: 4/10/2023
+# Last edited: 6/13/2023
 # ---------------------------------------------------------------------------
 
 # ---------------------------------------------------------------------------
@@ -152,6 +152,28 @@ legend("bottomleft", legend=c(unique(cosIL$aspect)),
        col=mycol2, pch=20, cex=1, bty ="n")
 dev.off()
 
+
+# --- light bank 1
+pdf(file = "../Plots/HSICalLib_20221128_cosIL1_aspect.pdf", 
+    width=8, height=8)
+plot(cosIL1~aspect, data=cosIL, col=mycol[factor(cosIL$slope)],
+     ylim=c(-0.5,1),
+     ylab="cos(illumination angle)", main="LightBank1 (N)")
+legend("bottomleft", legend=c(unique(cosIL$slope)), 
+       col=mycol, pch=20, cex=1, bty ="n")
+dev.off()
+
+# --- cosIL light bank 2
+pdf(file = "../Plots/HSICalLib_20221128_cosIL2_aspect.pdf", 
+    width=8, height=8)
+plot(cosIL2~aspect, data=cosIL, col=mycol[factor(cosIL$slope)],
+     #ylim=c(-0.5,1),
+     ylab="cos(illumination angle)", main="LightBank2 (S)")
+legend("bottomleft", legend=c(unique(cosIL$slope)), 
+       col=mycol, pch=20, cex=1, bty ="n")
+dev.off()
+
+
 # --- zenith 
 pdf(file = "../Plots/HSICalLib_20221128_zenith_slope.pdf", 
     width=8, height=8)
@@ -215,29 +237,25 @@ legend("topleft", legend=c(unique(cosIL$aspect)),
 dev.off()
 
 # mean
-pdf(file = "../Plots/HSICalLib_20221128_rmean_slope.pdf", 
-    width=8, height=8)
-plot(rmean~slope, data=cosIL, col=mycol2[factor(cosIL$aspect)], 
-     ylab = "cos(z)/cos(I)", ylim=c(-50,200), 
-     main="mean")
-legend("topleft", legend=c(unique(cosIL$aspect)), 
-       col=mycol2, pch=20, cex=1, bty ="n")
-dev.off()
+# pdf(file = "../Plots/HSICalLib_20221128_rmean_slope.pdf", 
+#     width=8, height=8)
+# plot(rmean~slope, data=cosIL, col=mycol2[factor(cosIL$aspect)], 
+#      ylab = "cos(z)/cos(I)", ylim=c(-50,200), 
+#      main="mean")
+# legend("topleft", legend=c(unique(cosIL$aspect)), 
+#        col=mycol2, pch=20, cex=1, bty ="n")
+# dev.off()
 
 # rcosmeans
 plot(rcosmeans~slope, data=cosIL, col=mycol2[factor(cosIL$aspect)], 
-     ylab = "cos(z)/cos(I)", 
-     #ylim=c(-50,200), 
-     main="mean")
+     ylab = "cos(z)/cos(gamma)")
 legend("topleft", legend=c(unique(cosIL$aspect)), 
        col=mycol2, pch=20, cex=1, bty ="n")
 
 plot(rcosmeans~aspect, data=cosIL, col=mycol[factor(cosIL$slope)], 
-     ylab = "cos(z)/cos(I)", 
-     #ylim=c(-50,200), 
-     main="mean")
-legend("topleft", legend=c(unique(cosIL$aspect)), 
-       col=mycol2, pch=20, cex=1, bty ="n")
+     ylab = "cos(z)/cos(gamma)")
+legend("topright", legend=c(unique(cosIL$slope)), 
+       col=mycol, pch=20, cex=1, bty ="n")
 
 # ---------------------------------------------------------------------------
 # 
