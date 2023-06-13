@@ -4,7 +4,7 @@
 # Objective: Create "templates" for each configuration which indicate the 
 #             row, column indices for each sample well at each configuration
 # Author: Alyssa M. Duro
-# Last edited: 4/10/2023
+# Last edited: 06/13/2023
 # ---------------------------------------------------------------------------
 
 # ---------------------------------------------------------------------------
