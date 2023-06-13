@@ -1,19 +1,21 @@
 # ---------------------------------------------------------------------------
 # R Script for the HSI Calibration Library 
 # ---------------------------------------------------------------------------
-# Objective: Merge the rutgers, NEON, UCR, and intmean data
+# Objective: Merge the rutgers, NEON, Fire, UCR, and intmean data
 # Author: Alyssa M. Duro
-# Last edited: 4/10/2023
+# Last edited: 6/13/2023
 # ---------------------------------------------------------------------------
 
 # ---------------------------------------------------------------------------
 # Goals:
 # ---------------------------------------------------------------------------
 
-# 1. Merge the Rutgers, NEON, and UCR sample prep .csv files using the HSI
+# 1. Merge the Rutgers, NEON, Fire, and UCR sample prep .csv files using HSI
 # sample number as the primary key
 
-# 2. Prepare master intmean (get all the batches in 1 data frame)
+# 2. Combine all C data into 1 columnal , calculate volC (g/cm3) and log10volC
+
+# 3. Prepare master intmean (get all the batches in 1 data frame)
 
 # ---------------------------------------------------------------------------
 # Load packages:
@@ -69,7 +71,7 @@ outputlogical <- TRUE
 # Bring in rutgers, neon, and hsi sample prep .csv files
 # ---------------------------------------------------------------------------
 
-dat <- '20220927'
+dat <- '20230418'
 
 # name the files for loading
 prepfile <- paste ( prefix , dat , 'SamplePrepData_R.csv', sep = "_" )
@@ -84,11 +86,28 @@ neon <- read.csv ( paste ( dname, neonfile, sep = "/" ) )
 fire <- read.csv ( paste ( dname, firefile, sep = "/" ) )
 
 # change the class in these columns from character to numeric
-as.integer ( as.numeric ( prep$HSInumber ) )
-as.integer ( as.numeric ( rutgers$HSInumber ) )
-as.integer ( as.numeric ( neon$HSInumber ) )
-as.integer ( as.numeric ( fire$HSInumber ) )
+prep$HSInumber <- as.integer ( as.numeric ( prep$HSInumber ) )
+rutgers$HSInumber <- as.integer ( as.numeric ( rutgers$HSInumber ) )
+neon$HSInumber <- as.integer ( as.numeric ( neon$HSInumber ) )
+fire$HSInumber <- as.integer ( as.numeric ( fire$HSInumber ) )
 
+# convert carbonTot in NEON to SOC
+neon$SOC <- rep ( NA , length ( neon [ , 1 ] ) )
+
+for (i in 1:nrow(neon)) {
+  # if caco3Conc is populated, subtract caco3Conc/10 from carbonTot 
+  if ( is.na(neon[i,"caco3Conc"] ) == FALSE ) { 
+    neon$SOC[i] <- (neon$carbonTot[i] - (neon$caco3Conc[i]/10)) / 10
+  } # close if loop
+  
+  # if caco3Conc is NA
+  if ( is.na(neon[i,"caco3Conc"] ) == TRUE ) {
+    neon$SOC[i] <- neon$carbonTot[i] / 10  # converts units from g/kg to percent
+  } # close if loop
+  
+} # close for loop
+
+# merge
 pr <- merge ( prep , rutgers , by = "HSInumber" , all.x = TRUE )
 prn <- merge ( pr , neon , by = "HSInumber" , all.x = TRUE )
 prnf <- merge ( prn , fire , by = "HSInumber" , all.x = TRUE )
@@ -112,7 +131,7 @@ for ( i in 1 : length ( prnf[,1] ) ) {
   if ( is.na(prnf[i,"NEON_archive"]) == FALSE ) { 
     
     prnf$archive[i] <- prnf$NEON_archive[i]
-    prnf$OC[i] <- prnf$carbonTot[i] / 10  # converts units from g/kg to percent
+    prnf$OC[i] <- prnf$SOC[i]
     prnf$adod[i] <- prnf$airDryOvenDryRatio[i]
   
   } # close the neon if loop
@@ -141,6 +160,8 @@ for ( i in 1 : length ( prnf[,1] ) ) {
 # calculate volC
 # ----------
 
+# volC = (g C/100g OD soil) * 100 * (g AD soil / cm3) * 1 / (g AD soil / g OD soil)
+
 prnf$volC <- rep ( NA , length ( prnf[,1] ) )
 
 # Start at the first row and go through all the rows in p
@@ -152,18 +173,18 @@ for ( i in 1 : length ( prnf[,1] ) ) {
     # Calculate volC and put it in the zth element of volC
     # C = g C / 100 g soil 
     # packed density = g soil / cm3 
-    # adod = unitless
-    prnf[i,"volC"] <- (prnf[i,"OC"])*prnf[i,"HSIPackedDensity"]*(1/prnf[i,"adod"])
+    # adod = AD mass / OD mass (unitless)
+    prnf[i,"volC"] <- (prnf[i,"OC"])*100*prnf[i,"HSIPackedDensity"]*(1/prnf[i,"adod"])
     
   } # Close the if loop
   
 } # Close the z (row) loop
 
 # ----------
-# calculate logvolC
+# calculate log10volC
 # ----------
 
-prnf$logvolC <- log(prnf$volC)
+prnf$log10volC <- log10(prnf$volC)
 
 # ----------
 # Output prnf
@@ -296,7 +317,7 @@ close ( pb )
 # Load in the masterintmean file and prnf
 # ----------
 
-# Bring in an existing masterintmean file
+# Bring in existing masterintmean file
 mifile <- paste ( prefix , batch[1] , batch[30] , 
                   'masterintmean.RData', sep = "_" )
 
@@ -314,37 +335,45 @@ prnfmasterintmean <- merge ( prnf , masterintmean , by = c ( "batch" , "well" )
                             , all.x = TRUE )
 
 # remove sample 709 & 610 (missing soil samples) and grab relevant columns
-p <- prnfmasterintmean[,c(1:4,29:31,52:529)]
+p <- prnfmasterintmean[,c(1:4,29:31,54:531)]
 p <- p[-which(prnfmasterintmean$HSInumber==709),]
 p <- p[-which(prnfmasterintmean$HSInumber==650),]
 
-# 1178 samples * 98 configurations
+# p = 1178 samples * 98 configurations = 115,444
 
 p$batchwellID <- paste("b",p$batch,"_w",p$well,"_s",p$slope,"_a",p$aspect, sep="")
 names(p)[15:485] <- paste("obsI" , names(p)[15:485] , sep = "")
 
 rm(list=c("masterintmean","prnfmasterintmean", "prnf"))
 
-# Output intmean and intsd for all configurations
+# Output p for all configurations 
 if ( outputlogical == TRUE ) {
   
   # name of the master file (all configurations for one batch)
   masterout <- paste ( prefix , batch[1] , batch[30] , 
                        'p.RData' , 
                        sep = "_" )
-  # masterintmean = 40 wells * 30 batches * 98 configurations
-  
+
   setwd ( oname )
   save ( list = c ( 'p' ) , file = paste ( masterout ) )
   
 } # Close the loop outputting masterintmean for these batches
 
 # ----------
-# if you want to output as csv
+# if you want to output 'p' as csv
 # ----------
 
 poutcsv <- paste ( prefix , batch[1] , batch[30] , 'p.csv' , sep = "_" )
 write.csv(p, file = paste(poutcsv))
+
+# ----------
+# output data for the fire samples for Daniel
+# ----------
+
+firedf <- prnfmasterintmean[,c(1:6,50:531)]
+firedf <- firedf[which(prnfmasterintmean$archive=='GrayLab'),]
+fireoutcsv <- paste ( prefix, "FireSamples_spectral_SOC_allorientations.csv" , sep = "_" )
+write.csv(firedf, file = paste(fireoutcsv))
 
 # ---------------------------------------------------------------------------
 #
