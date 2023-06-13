@@ -4,7 +4,7 @@
 # Objective: Output intensities for every wavelength for every pixel that occurs
 #             within a sample well from hsi and template.RData inputs.
 # Author: Alyssa M. Duro
-# Last edited: 4/10/2023
+# Last edited: 6/13/2023
 # ---------------------------------------------------------------------------
 
 # ---------------------------------------------------------------------------
@@ -71,7 +71,7 @@ outputlogical <- TRUE
 # ---------------------------------------------------------------------------
 # ---------------------------------------------------------------------------
 # Goal 2:
-# Get the average intensity for each wavelength for each pixel in the well
+# Get the intensities for each wavelength for each pixel in the well
 # ---------------------------------------------------------------------------
 # ---------------------------------------------------------------------------
 
@@ -97,7 +97,9 @@ outputlogical <- TRUE
 # each row corresponds to a pixel (equals the number of rows in the same
 # element of soilindices).
 
-# # for now leaving out SG ----------
+# ----------
+# Leaving out SG steps for now:
+
 # The first and last 10 wavelengths (columns) in intensities are NA because
 # the window for sg was 21 so sg began at 11 and ended at 461 (i.e., was not
 # performed on wavelengths 1-10 or 462-471 nm). This is so that the number of
