@@ -559,7 +559,7 @@ close(pb)
 spectralstats_dIc_w_a_2 <- spectralstats_dIc_w_a # only need this for dI+
 
 save(list=c('spectralstats_dIc_w_a_2'), 
-     file=paste("../Output Files/HSICalLib_20230613_",
+     file=paste("../Output Files/HSICalLib_20230613_globaldI_",
                 "spectralstats_dIc_w_a_2.RData", sep="") )
 
 rm(list=c('spectralstats0','spectralstats2','spectralstats4','pb'))
