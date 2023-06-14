@@ -136,8 +136,8 @@ summary(lmodel)
 # ---------------------------------------------------------------------------
 
 lmodel_all <- lm(dI ~ slope + aspect + wavelength,
-                 #+ slope*aspect + slope*wavelength
-                 #+ aspect*wavelength + slope*aspect*wavelength,
+                 + slope*aspect + slope*wavelength
+                 + aspect*wavelength + slope*aspect*wavelength,
                  data=pga_dI_refI_melt_slm)
 
 summary(lmodel_all)
@@ -177,13 +177,13 @@ pga_dI_refI_melt_slm$dIc <- pga_dI_refI_melt_slm$obsI - pga_dI_refI_melt_slm$dIp
 pga_dI_refI_melt_slm_dIp_dIc <- pga_dI_refI_melt_slm
 
 # change number (just for outputting file) based on dI or dI+
-pga_dI_refI_melt_slm_dIp_dIc_1 <- pga_dI_refI_melt_slm_dIp_dIc
+pga_dI_refI_melt_slm_dIp_dIc_2 <- pga_dI_refI_melt_slm_dIp_dIc
 
 rm(list=c('lmodel_all','pga_dI_refI_melt_slm'))
 
-save ( list = c ( 'pga_dI_refI_melt_slm_dIp_dIc_1' ) , 
+save ( list = c ( 'pga_dI_refI_melt_slm_dIp_dIc_2' ) , 
        file = paste ("../Output Files/HSICalLib_20230613_globaldI_predict_",
-                     "lm_pga_dI_refI_melt_slm_dIp_dIc_1.RData", 
+                     "lm_pga_dI_refI_melt_slm_dIp_dIc_2.RData", 
                      sep="") )
 
 # ---------------------------------------------------------------------------
@@ -386,9 +386,9 @@ close(pb)
 # change number (just for outputting file) based on dI or dI+
 spectralstats_dIc_1 <- spectralstats_dIc
 
-save(list=c('spectralstats_dIc_1'), 
+save(list=c('spectralstats_dIc_2'), 
      file=paste("../Output Files/HSICalLib_20230613_globaldI_",
-                "spectralstats_dIc_1.RData", sep="") )
+                "spectralstats_dIc_2.RData", sep="") )
 
 rm(list=c('spectralstats0','spectralstats2','spectralstats3',
           'spectralstats4','pb','KGEoutput','obs','pred_obs','pred_dIc'))
