@@ -3,7 +3,7 @@
 # ---------------------------------------------------------------------------
 # Objective: predict OC from corrected spectra
 # Author: Alyssa M. Duro
-# Last edited: 3/21/2023
+# Last edited: 6/16/2023
 # ---------------------------------------------------------------------------
 
 # ---------------------------------------------------------------------------
@@ -45,7 +45,6 @@ hnums <- c(rand1,301:876,1027:1083)
 
 p <- p_gold %>% filter (slope==0 & aspect==0)
 p <- p %>% filter ( HSInumber %in% hnums )
-p <- p %>% filter ( volC > 0 )
 
 # ----------
 # df for plotting soil properties histograms
@@ -159,7 +158,7 @@ save ( list = c ( 'refI_p' ) ,
        file=paste("../Output Files/HSICalLib_20230613_globaldI_OCpredict_refI_p.RData",
                   sep="") )
 
-#load("../Output Files/HSICalLib_20230613_globaldI_OCpredict_refI_p.RData")
+load("../Output Files/HSICalLib_20230613_globaldI_OCpredict_refI_p.RData")
 
 # --- obsI_p
 obsI_p <- merge(obsI, p, by="HSInumber")
@@ -168,7 +167,7 @@ save ( list = c ( 'obsI_p' ) ,
        file=paste("../Output Files/HSICalLib_20230613_globaldI_OCpredict_obsI_p.RData",
                   sep="") )
 
-#load("../Output Files/HSICalLib_20230613_globaldI_OCpredict_obsI_p.RData")
+load("../Output Files/HSICalLib_20230613_globaldI_OCpredict_obsI_p.RData")
 
 # --- dIc
 dIc_p <- merge(dIc, p, by="HSInumber")
@@ -177,11 +176,9 @@ save ( list = c ( 'dIc_p' ) ,
        file=paste("../Output Files/HSICalLib_20230613_globaldI_OCpredict_dIc_p.RData",
                   sep="") )
 
-#load("../Output Files/HSICalLib_20230613_globaldI_OCpredict_dIc_p.RData")
+load("../Output Files/HSICalLib_20230613_globaldI_OCpredict_dIc_p.RData")
 
-rm(list=c('refI_pls','obsI_pls','ccorI_pls','dIc_pls','p'))
-rm(list=c('pga_refI','pga_obsI','pga_dIc'))
-
+rm(list=c('refI_p','obsI_p','dIc_p','p','refI','obsI','dIc'))
 
 # ---------------------------------------------------------------------------
 # Define some variables and functions
@@ -276,6 +273,8 @@ plsmodel_ref <- plsr(log10volC~., data=train_ref[,c(4:475)], ncomp=50, validatio
 save ( list = c ( 'plsmodel_ref' ) , 
        file=paste("../Output Files/HSICalLib_20230613_globaldI_",
                   "plsmodel_log10volC_refI_train.RData", sep="") )
+
+#load("../Output Files/HSICalLib_20230613_globaldI_plsmodel_log10volC_refI_train.RData")
 
 nc_ref <- selectNcomp(plsmodel_ref, method="onesigma", plot=FALSE)
 
@@ -563,6 +562,8 @@ plsmodel_dIc <- plsr(log10volC~., data=train_dIc[,c(4:475)], ncomp=50, validatio
 save ( list = c ( 'plsmodel_dIc' ) , 
        file=paste("../Output Files/HSICalLib_20230613_globaldI_",
                   "plsmodel_log10volC_dIc_train.RData", sep="") )
+
+#load("../Output Files/HSICalLib_20230613_globaldI_plsmodel_log10volC_dIc_train.RData")
 
 nc_dIc <- selectNcomp(plsmodel_dIc, method="onesigma", plot=FALSE)
 
