@@ -13,7 +13,7 @@
 # 1. Merge the Rutgers, NEON, Fire, and UCR sample prep .csv files using HSI
 # sample number as the primary key
 
-# 2. Combine all C data into 1 column , calculate volC (g/cm3) and log10volC
+# 2. Combine all C data into 1 column, calculate volC (g/cm3) and log10volC
 
 # 3. Prepare master intmean (get all the batches in 1 data frame)
 
