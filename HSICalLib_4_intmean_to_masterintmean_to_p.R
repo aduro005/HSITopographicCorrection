@@ -3,7 +3,7 @@
 # ---------------------------------------------------------------------------
 # Objective: Merge the rutgers, NEON, Fire, UCR, and intmean data
 # Author: Alyssa M. Duro
-# Last edited: 6/13/2023
+# Last edited: 6/16/2023
 # ---------------------------------------------------------------------------
 
 # ---------------------------------------------------------------------------
@@ -13,7 +13,7 @@
 # 1. Merge the Rutgers, NEON, Fire, and UCR sample prep .csv files using HSI
 # sample number as the primary key
 
-# 2. Combine all C data into 1 columnal , calculate volC (g/cm3) and log10volC
+# 2. Combine all C data into 1 column , calculate volC (g/cm3) and log10volC
 
 # 3. Prepare master intmean (get all the batches in 1 data frame)
 
@@ -160,7 +160,7 @@ for ( i in 1 : length ( prnf[,1] ) ) {
 # calculate volC
 # ----------
 
-# volC = (g C/100g OD soil) * 100 * (g AD soil / cm3) * 1 / (g AD soil / g OD soil)
+# volC = (g C/100g OD soil) / 100 * (g AD soil / cm3) * 1 / (g AD soil / g OD soil)
 
 prnf$volC <- rep ( NA , length ( prnf[,1] ) )
 
@@ -174,7 +174,7 @@ for ( i in 1 : length ( prnf[,1] ) ) {
     # C = g C / 100 g soil 
     # packed density = g soil / cm3 
     # adod = AD mass / OD mass (unitless)
-    prnf[i,"volC"] <- (prnf[i,"OC"])*100*prnf[i,"HSIPackedDensity"]*(1/prnf[i,"adod"])
+    prnf[i,"volC"] <- (prnf[i,"OC"]/100)*prnf[i,"HSIPackedDensity"]*(1/prnf[i,"adod"])
     
   } # Close the if loop
   
