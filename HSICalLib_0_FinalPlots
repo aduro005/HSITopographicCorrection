@@ -1,0 +1,1855 @@
+# ---------------------------------------------------------------------------
+# R Script for the HSI Calibration Library 
+# ---------------------------------------------------------------------------
+# Objective: Final plots for HSI Topographic Correction
+# Author: Alyssa M. Duro
+# Last edited: 06/17/2023
+# ---------------------------------------------------------------------------
+
+# ---------------------------------------------------------------------------
+# Load packages
+# ---------------------------------------------------------------------------
+
+library(dplyr) # df %>% filter()
+library(plotrix) # color ramp in legend
+library(RColorBrewer)
+
+# ---------------------------------------------------------------------------
+# Load files
+# ---------------------------------------------------------------------------
+
+load("../Output Files/HSICalLib_wavevec.RData")
+
+# ----------
+# for part I spectral plots
+load("../Output Files/HSICalLib_20230613_globaldI_predict_lm_pga_dI_refI_melt_slm_dIp_dIc_2.RData")
+
+# ----------
+# for part I boxplots
+load("../Output Files/HSICalLib_20230613_globaldI_spectralstats_dIc_1.RData")
+load("../Output Files/HSICalLib_20230613_globaldI_spectralstats_dIc_2.RData")
+load("../Output Files/HSICalLib_20230613_spectralstats_coscor.RData")
+load("../Output Files/HSICalLib_20230613_spectralstats_ccor.RData")
+
+# ----------
+# for part I RMSE spectra plots
+load("../Output Files/HSICalLib_20230613_globaldI_spectralstats_dIc_w_s_2.RData")
+load("../Output Files/HSICalLib_20230613_globaldI_spectralstats_dIc_w_a_2.RData")
+
+# ----------
+# for part II validation plots
+load("../Output Files/HSICalLib_20230613_globaldI_PLSR_log10volC_sstatdf_tr_ref.RData")
+load("../Output Files/HSICalLib_20230613_globaldI_PLSR_log10volC_sstatdf_obs.RData")
+load("../Output Files/HSICalLib_20230613_globaldI_PLSR_log10volC_sstatdf_tr_dIc.RData")
+load("../Output Files/HSICalLib_20230613_globaldI_PLSR_log10volC_sstatdf_dIc.RData")
+
+# ----------
+# for part II boxplots
+load("../Output Files/HSICalLib_20230613_globaldI_PLSR_log10volC_summarystats_OC.RData")
+
+# ---------------------------------------------------------------------------
+# Function to add letters to multipanel plots
+# ---------------------------------------------------------------------------
+
+putfigletter <- function(label, location="topleft", x=NULL, y=NULL, 
+                         offset=c(0, 0), ...) {
+  if(length(label) > 1) {
+    warning("length(label) > 1, using label[1]")
+  }
+  if(is.null(x) | is.null(y)) {
+    coords <- switch(location,
+                     topleft = c(0.1,0.93),
+                     topcenter = c(0.5525,0.98),
+                     topright = c(0.985, 0.98),
+                     bottomleft = c(0.015, 0.02), 
+                     bottomcenter = c(0.5525, 0.02), 
+                     bottomright = c(0.985, 0.02),
+                     c(0.015, 0.98) )
+  } else {
+    coords <- c(x,y)
+  }
+  this.x <- grconvertX(coords[1] + offset[1], from="nfc", to="user")
+  this.y <- grconvertY(coords[2] + offset[2], from="nfc", to="user")
+  text(labels=label[1], x=this.x, y=this.y, xpd=T, ...)
+}
+
+# ---------------------------------------------------------------------------
+# Remove outliers from spectralstats (based on RMSE) before plotting
+# ---------------------------------------------------------------------------
+# 
+# removeoutliers <- function(df, dfcolumn) {
+#   
+# IQR <- as.numeric(quantile(dfcolumn)[4] - quantile(dfcolumn)[2])
+# maxRMSE <- as.numeric(quantile(dfcolumn)[4] + (1.5*IQR))
+# minRMSE <- as.numeric(quantile(dfcolumn)[2] - (1.5*IQR))
+# 
+# cleandf <- df[which(dfcolumn>minRMSE&dfcolumn<maxRMSE),]
+# 
+# return(cleandf)
+# } # close function
+# 
+# # global dI model 1
+# spectralstats_dIc_1_clean <- removeoutliers(spectralstats_dIc_1, spectralstats_dIc_1$RMSE_dIc)
+# 
+# # global dI model 2 (& obsI)
+# spectralstats_dIc_2_clean <- removeoutliers(spectralstats_dIc_2, spectralstats_dIc_2$RMSE_dIc)
+# 
+# # global dI model 3
+# spectralstats_dIc_3_clean <- removeoutliers(spectralstats_dIc_3, spectralstats_dIc_3$RMSE_dIc)
+# 
+# # cosine corrected
+# spectralstats_coscor_clean <- removeoutliers(spectralstats_coscor, spectralstats_coscor$RMSE_coscor)
+# 
+# # C corrected
+# spectralstats_ccor_clean <- removeoutliers(spectralstats_ccor, spectralstats_ccor$RMSE_ccor)
+
+# ---------------------------------------------------------------------------
+# color palette for boxplots
+# ---------------------------------------------------------------------------
+
+palette <- c('#7fc97f','#beaed4','#ffff99','#386cb0')
+
+# ----------
+# change opacity in correction method palette
+opalette <- character()
+
+for(i in 1:length(palette)) {
+  opalette[i] <- adjustcolor(palette[i], alpha.f = 0.3)
+  
+} # close the i loop
+
+# ---------------------------------------------------------------------------
+# color palettes for spectral plots
+# ---------------------------------------------------------------------------
+
+# ----------
+# color by aspect
+coul <- brewer.pal(9, "YlOrRd") 
+apalette <- colorRampPalette(coul)(14)
+
+# ----------
+# color by slope
+spalette <- c('#c7e9b4','#7fcdbb','#41b6c4','#1d91c0','#225ea8','#0c2c84')
+
+# ----------
+# change opacity in slope palette
+ospalette <- character()
+
+for(i in 1:length(spalette)) {
+  ospalette[i] <- adjustcolor(spalette[i], alpha.f = 0.3)
+
+} # close the i loop
+
+# ----------
+# change opacity in aspect palette
+oapalette <- character()
+
+for(i in 1:length(apalette)) {
+  oapalette[i] <- adjustcolor(apalette[i], alpha.f = 0.3)
+
+} # close the i loop
+
+# ----------
+# histogram colors
+
+# bcol <- rgb(0, 0, 255, max = 255, alpha = 90 )
+# gcol <- rgb(0, 255, 0, max = 255, alpha = 70 )
+
+# ---------------------------------------------------------------------------
+# unique slope & aspect values 
+# ---------------------------------------------------------------------------
+
+snum <- sort(unique(pga_dI_refI_melt_slm_dIp_dIc_2$slope))
+anum <- sort(unique(pga_dI_refI_melt_slm_dIp_dIc_2$aspect))
+
+# ---------------------------------------------------------------------------
+# Plot argument values 
+# ---------------------------------------------------------------------------
+
+numsize <- 2 # cex.axis=numsize
+textsize <- 2 # ylab=list("title", cex=textsize)
+legtextsize <- textsize-0.2
+
+
+figlettersize <- textsize+0.2
+figletterx <- 0.07
+figlettery <- 0.93
+
+# for spectralstats
+boxwidth <- 0.15 # boxwex=boxwidth
+boxposition <- c(0.4,0.2,0.1,0.2,0.4) # at +/- boxposition
+
+linewidth <- 1 # lwd
+leglwd <- linewidth+2
+
+refcol <- "black" # reference line color
+reflty <- 2 # reference line type (lty)
+reflwd <- 3.5 # reference line width (lwd)
+
+uncol <- "lightgrey" # uncorrected line color
+
+# ---------------------------------------------------------------------------
+# Setup layout for 4 panel RMSE and NSE correction plots
+# ---------------------------------------------------------------------------
+
+pdf(file = paste("../Plots/HSICalLib_20230614_spectralstats_boxplots_final.pdf", sep="") ,
+    width=12, height=12)
+
+layout(matrix(c(1, 2, 3,3, 4,4), nrow=3, ncol=2, byrow=TRUE))
+
+# ---------------------------------------------------------------------------
+# Boxplots of RMSE & KGE vs slope
+# ---------------------------------------------------------------------------
+
+# --- RMSE vs slope boxplot
+# pdf(file = "../Plots/HSICalLib_20230314_final_RMSEvsslope_boxplot.pdf", 
+#     width=8, height=8)
+
+par(mar=c(5,5.5,3,2), mgp=c(3.6,1.4,0)) #bottom, left, top, right
+boxplot(RMSE_dIc~slope, data=spectralstats_dIc_2, col=palette[2], 
+        boxwex=boxwidth, 
+        ylim=c(0,0.2),
+        cex.axis=numsize+0.5,
+        outpch=".", outcol=opalette[2], notch=TRUE, 
+        xlab = list(expression("Slope ("~degree~")"),cex=textsize+0.5), 
+        ylab = list("RMSE",cex=textsize+0.5))
+
+boxplot(RMSE_dIc~slope, data=spectralstats_dIc_1, col=palette[1], 
+        add=T, boxwex=boxwidth, 
+        at = 1:length(unique(spectralstats_dIc_1$slope))-boxposition[2], axes=FALSE,
+        notch=TRUE, pch=".", outcol=opalette[1], xaxt="n")
+
+# add uncorrected to the far left
+boxplot(RMSE_obs~slope, data=spectralstats_dIc_2, col=uncol, 
+        add=T, boxwex=boxwidth, 
+        at = 1:length(unique(spectralstats_dIc_2$slope))-boxposition[1], axes=FALSE,
+        notch=TRUE, pch=".", outcol=uncol, xaxt="n")
+
+boxplot(RMSE_coscor~slope, data=spectralstats_coscor, col=palette[3], 
+        add=T, boxwex=boxwidth, 
+        at = 1:length(unique(spectralstats_coscor$slope))+boxposition[4], axes=FALSE,
+        notch=TRUE, pch=".", outcol=opalette[3], xaxt="n")
+
+boxplot(RMSE_ccor~slope, data=spectralstats_ccor, col=palette[4], 
+        add=T, boxwex=boxwidth, 
+        at = 1:length(unique(spectralstats_ccor$slope))+boxposition[5], axes=FALSE,
+        notch=TRUE, pch=".", outcol=opalette[4], xaxt="n")
+
+legend("topleft", 
+       legend=c("Uncorrected", 
+                expression(paste(Delta,"I Corrected")),
+                expression(paste(Delta,"I+ Corrected")),
+                "Cosine Corrected", "C-Corrected"), 
+       col=c("lightgrey",palette), pch=15, cex=legtextsize, bty ="n")
+
+putfigletter("A", font=2, cex=figlettersize+0.5, x=figletterx+0.08, y=figlettery+0.02, offset=c(0, 0))
+
+#dev.off()
+
+# --- NSE vs slope boxplot
+# pdf(file = "../Plots/HSICalLib_20230314_final_NSEvsslope_boxplot.pdf", 
+#     width=8, height=8)
+
+par(mar=c(5,5.5,3,2), mgp=c(3.6,1.4,0)) #bottom, left, top, right
+boxplot(NSE_dIc~slope, data=spectralstats_dIc_2, col=palette[2], 
+        boxwex=boxwidth, 
+        ylim=c(0,1),
+        cex.axis=numsize+0.5,
+        pch=".", notch=TRUE, outcol=opalette[2],
+        xlab = list(expression("Slope ("~degree~")"),cex=textsize+0.5), 
+        ylab = list("NSE",cex=textsize+0.5))
+
+boxplot(NSE_dIc~slope, data=spectralstats_dIc_1, col=palette[1], 
+        add=T, boxwex=boxwidth, 
+        at = 1:length(unique(spectralstats_dIc_1$slope))-boxposition[2], axes=FALSE,
+        notch=TRUE, pch=".", outcol=opalette[1], xaxt="n")
+
+# add uncorrected to the far left
+boxplot(NSE_obs~slope, data=spectralstats_dIc_2, col=uncol, 
+        add=T, boxwex=boxwidth, 
+        at = 1:length(unique(spectralstats_dIc_2$slope))-boxposition[1], axes=FALSE,
+        notch=TRUE, pch=".",outcol=uncol, xaxt="n")
+
+boxplot(NSE_coscor~slope, data=spectralstats_coscor, col=palette[3], 
+        add=T, boxwex=boxwidth, 
+        at = 1:length(unique(spectralstats_coscor$slope))+boxposition[4], axes=FALSE,
+        notch=TRUE, pch=".", outcol=opalette[3], xaxt="n")
+
+boxplot(NSE_ccor~slope, data=spectralstats_ccor, col=palette[4], 
+        add=T, boxwex=boxwidth, 
+        at = 1:length(unique(spectralstats_ccor$slope))+boxposition[5], axes=FALSE,
+        notch=TRUE, pch=".", outcol=opalette[4], xaxt="n")
+
+putfigletter("B", font=2, cex=figlettersize+0.5, x=figletterx+0.08, y=figlettery+0.02, offset=c(0, 0))
+
+#dev.off()
+
+# ---------------------------------------------------------------------------
+# Boxplots of RMSE, NSE, & KGE vs aspect
+# ---------------------------------------------------------------------------
+
+# --- RMSE vs aspect boxplot
+# pdf(file = "../Plots/HSICalLib_20230314_final_RMSEvsaspect_boxplot.pdf", 
+#     width=12, height=8)
+
+par(mar=c(5,5.5,1,2), mgp=c(3.6,1.4,0)) #bottom, left, top, right
+boxplot(RMSE_dIc~aspect, data=spectralstats_dIc_2, col=palette[2], 
+        boxwex=boxwidth, 
+        ylim=c(0,0.2),
+        cex.axis=numsize+0.5,
+        pch=".", notch=TRUE, outcol=opalette[2],
+        xlab = list(expression("Aspect ("~degree~")"),cex=textsize+0.5), 
+        ylab = list("RMSE",cex=textsize+0.5))
+
+boxplot(RMSE_dIc~aspect, data=spectralstats_dIc_1, col=palette[1], 
+        add=T, boxwex=boxwidth, 
+        at = 1:length(unique(spectralstats_dIc_1$aspect))-boxposition[2], axes=FALSE,
+        notch=TRUE, pch=".", outcol=opalette[1], xaxt="n")
+
+# add uncorrected to the far left
+boxplot(RMSE_obs~aspect, data=spectralstats_dIc_2, col=uncol, 
+        add=T, boxwex=boxwidth, 
+        at = 1:length(unique(spectralstats_dIc_2$aspect))-boxposition[1], axes=FALSE,
+        notch=TRUE, pch=".", outcol=uncol, xaxt="n")
+
+boxplot(RMSE_coscor~aspect, data=spectralstats_coscor, col=palette[3], 
+        add=T, boxwex=boxwidth, 
+        at = 1:length(unique(spectralstats_coscor$aspect))+boxposition[4], axes=FALSE,
+        notch=TRUE, pch=".", outcol=opalette[3],xaxt="n")
+
+boxplot(RMSE_ccor~aspect, data=spectralstats_ccor, col=palette[4], 
+        add=T, boxwex=boxwidth, 
+        at = 1:length(unique(spectralstats_ccor$aspect))+boxposition[5], axes=FALSE,
+        notch=TRUE, pch=".", outcol=opalette[4], xaxt="n")
+
+putfigletter("C", font=2, cex=figlettersize+0.5, x=figletterx+0.01, y=figlettery-0.02, offset=c(0, 0))
+
+#dev.off()
+
+# --- NSE vs aspect boxplot
+# pdf(file = "../Plots/HSICalLib_20230314_final_NSEvsaspect_boxplot.pdf", 
+#     width=12, height=8)
+
+par(mar=c(5,5.5,1,2), mgp=c(3.6,1.4,0)) 
+#mar=c(bottom, left, top, right) 
+#mgp=c(axis.title.position, axis.label.position, axis.line.position)
+
+boxplot(NSE_dIc~aspect, data=spectralstats_dIc_2, col=palette[2], 
+        boxwex=boxwidth, 
+        ylim=c(0,1),
+        cex.axis=numsize+0.5,
+        pch=".", notch=TRUE, outcol=opalette[2],
+        xlab = list(expression("Aspect ("~degree~")"),cex=textsize+0.5), 
+        ylab = list("NSE",cex=textsize+0.5))
+
+boxplot(NSE_dIc~aspect, data=spectralstats_dIc_1, col=palette[1], 
+        add=T, boxwex=boxwidth, 
+        at = 1:length(unique(spectralstats_dIc_1$aspect))-boxposition[2], axes=FALSE,
+        notch=TRUE, pch=".", outcol=opalette[1], xaxt="n")
+
+# add uncorrected to the far left
+boxplot(NSE_obs~aspect, data=spectralstats_dIc_2, col=uncol, 
+        add=T, boxwex=boxwidth, 
+        at = 1:length(unique(spectralstats_dIc_2$aspect))-boxposition[1], axes=FALSE,
+        notch=TRUE, pch=".", outcol=uncol, xaxt="n")
+
+boxplot(NSE_coscor~aspect, data=spectralstats_coscor, col=palette[3], 
+        add=T, boxwex=boxwidth, 
+        at = 1:length(unique(spectralstats_coscor$aspect))+boxposition[4], axes=FALSE,
+        notch=TRUE, pch=".", outcol=opalette[3],xaxt="n")
+
+boxplot(NSE_ccor~aspect, data=spectralstats_ccor, col=palette[4], 
+        add=T, boxwex=boxwidth, 
+        at = 1:length(unique(spectralstats_ccor$aspect))+boxposition[5], axes=FALSE,
+        notch=TRUE, pch=".", outcol=opalette[4], xaxt="n")
+
+putfigletter("D", font=2, cex=figlettersize+0.5, x=figletterx+0.01, y=figlettery-0.02, offset=c(0, 0))
+
+#dev.off()
+
+dev.off()
+
+# # --- KGE vs slope boxplot
+# pdf(file = "../Plots/HSICalLib_20230314_final_KGEvsslope_boxplot.pdf", 
+#     width=8, height=8)
+# 
+# boxplot(KGE_dIc~slope, data=spectralstats_dIc_3_clean, col=palette[3], boxwex=0.12, 
+#         ylim=c(0,1),cex.axis=cexaxis,
+#         pch=".", notch=TRUE, 
+#         xlab = list(expression("Slope ("~degree~")"),cex=textsize), 
+#         ylab = list("KGE",cex=textsize))
+# 
+# boxplot(KGE_dIc~slope, data=spectralstats_dIc_2_clean, col=palette[2], add=T, boxwex=0.12, 
+#         at = 1:length(unique(spectralstats_dIc_2_clean$slope))-0.14, axes=FALSE,
+#         notch=TRUE, pch=".", xaxt="n")
+# 
+# boxplot(KGE_dIc~slope, data=spectralstats_dIc_1_clean, col=palette[1], add=T, boxwex=0.12, 
+#         at = 1:length(unique(spectralstats_dIc_1_clean$slope))-0.28, axes=FALSE,
+#         notch=TRUE, pch=".", xaxt="n")
+# 
+# # add uncorrected to the far left
+# boxplot(KGE_obs~slope, data=spectralstats_dIc_2_clean, col="lightgrey", add=T, boxwex=0.12, 
+#         at = 1:length(unique(spectralstats_dIc_2_clean$slope))-0.42, axes=FALSE,
+#         notch=TRUE, pch=".", xaxt="n")
+# 
+# boxplot(KGE_coscor~slope, data=spectralstats_coscor_clean, col=palette[4], add=T, boxwex=0.12, 
+#         at = 1:length(unique(spectralstats_coscor_clean$slope))+0.14, axes=FALSE,
+#         notch=TRUE, pch=".", xaxt="n")
+# 
+# boxplot(KGE_ccor~slope, data=spectralstats_ccor_clean, col=palette[5], add=T, boxwex=0.12, 
+#         at = 1:length(unique(spectralstats_ccor_clean$slope))+0.28, axes=FALSE,
+#         notch=TRUE, pch=".", xaxt="n")
+# 
+# dev.off()
+# 
+# 
+# # --- KGE_r vs slope boxplot
+# pdf(file = "../Plots/HSICalLib_20230310_final_KGE_rvsslope_boxplot.pdf", 
+#     width=8, height=8)
+# 
+# boxplot(KGE_dIc_r~slope, data=spectralstats_dIc_3_clean, col=palette[3], boxwex=0.12, 
+#         ylim=c(0.98,1),cex.axis=numsize,
+#         pch=".", notch=TRUE, 
+#         xlab = expression("Slope ("~degree~")"), 
+#         ylab = "KGE_r")
+# 
+# boxplot(KGE_dIc_r~slope, data=spectralstats_dIc_2_clean, col=palette[2], add=T, boxwex=0.12, 
+#         at = 1:length(unique(spectralstats_dIc_2_clean$slope))-0.14, axes=FALSE,
+#         notch=TRUE, pch=".", xaxt="n")
+# 
+# boxplot(KGE_dIc_r~slope, data=spectralstats_dIc_1_clean, col=palette[1], add=T, boxwex=0.12, 
+#         at = 1:length(unique(spectralstats_dIc_1_clean$slope))-0.28, axes=FALSE,
+#         notch=TRUE, pch=".", xaxt="n")
+# 
+# # add uncorrected to the far left
+# boxplot(KGE_obs_r~slope, data=spectralstats_dIc_2_clean, col="lightgrey", add=T, boxwex=0.12, 
+#         at = 1:length(unique(spectralstats_dIc_2_clean$slope))-0.42, axes=FALSE,
+#         notch=TRUE, pch=".", xaxt="n")
+# 
+# boxplot(KGE_coscor_r~slope, data=spectralstats_coscor_clean, col=palette[4], add=T, boxwex=0.12, 
+#         at = 1:length(unique(spectralstats_coscor_clean$slope))+0.14, axes=FALSE,
+#         notch=TRUE, pch=".", xaxt="n")
+# 
+# boxplot(KGE_ccor_r~slope, data=spectralstats_ccor_clean, col=palette[5], add=T, boxwex=0.12, 
+#         at = 1:length(unique(spectralstats_ccor_clean$slope))+0.28, axes=FALSE,
+#         notch=TRUE, pch=".", xaxt="n")
+# 
+# dev.off()
+# 
+# 
+# # --- KGE_beta vs slope boxplot
+# pdf(file = "../Plots/HSICalLib_20230310_final_KGE_betavsslope_boxplot.pdf", 
+#     width=8, height=8)
+# 
+# boxplot(KGE_dIc_beta~slope, data=spectralstats_dIc_3_clean, col=palette[3], boxwex=0.12, 
+#         ylim=c(0.4,2),
+#         cex.axis=numsize,
+#         pch=".", notch=TRUE, 
+#         xlab = expression("Slope ("~degree~")"), 
+#         ylab = "KGE_beta")
+# 
+# boxplot(KGE_dIc_beta~slope, data=spectralstats_dIc_2_clean, col=palette[2], add=T, boxwex=0.12, 
+#         at = 1:length(unique(spectralstats_dIc_2_clean$slope))-0.14, axes=FALSE,
+#         notch=TRUE, pch=".", xaxt="n")
+# 
+# boxplot(KGE_dIc_beta~slope, data=spectralstats_dIc_1_clean, col=palette[1], add=T, boxwex=0.12, 
+#         at = 1:length(unique(spectralstats_dIc_1_clean$slope))-0.28, axes=FALSE,
+#         notch=TRUE, pch=".", xaxt="n")
+# 
+# # add uncorrected to the far left
+# boxplot(KGE_obs_beta~slope, data=spectralstats_dIc_2_clean, col="lightgrey", add=T, boxwex=0.12, 
+#         at = 1:length(unique(spectralstats_dIc_2_clean$slope))-0.42, axes=FALSE,
+#         notch=TRUE, pch=".", xaxt="n")
+# 
+# boxplot(KGE_coscor_beta~slope, data=spectralstats_coscor_clean, col=palette[4], add=T, boxwex=0.12, 
+#         at = 1:length(unique(spectralstats_coscor_clean$slope))+0.14, axes=FALSE,
+#         notch=TRUE, pch=".", xaxt="n")
+# 
+# boxplot(KGE_ccor_beta~slope, data=spectralstats_ccor_clean, col=palette[5], add=T, boxwex=0.12, 
+#         at = 1:length(unique(spectralstats_ccor_clean$slope))+0.28, axes=FALSE,
+#         notch=TRUE, pch=".", xaxt="n")
+# 
+# abline(a=1,b=0)
+# 
+# dev.off()
+# 
+# 
+# # --- KGE_alpha vs slope boxplot
+# pdf(file = "../Plots/HSICalLib_20230310_final_KGE_alphavsslope_boxplot.pdf", 
+#     width=8, height=8)
+# 
+# boxplot(KGE_dIc_alpha~slope, data=spectralstats_dIc_3_clean, col=palette[3], boxwex=0.12, 
+#         ylim=c(0.4,2),
+#         cex.axis=numsize,
+#         pch=".", notch=TRUE, 
+#         xlab = expression("Slope ("~degree~")"), 
+#         ylab = "KGE_alpha")
+# 
+# boxplot(KGE_dIc_alpha~slope, data=spectralstats_dIc_2_clean, col=palette[2], add=T, boxwex=0.12, 
+#         at = 1:length(unique(spectralstats_dIc_2_clean$slope))-0.14, axes=FALSE,
+#         notch=TRUE, pch=".", xaxt="n")
+# 
+# boxplot(KGE_dIc_alpha~slope, data=spectralstats_dIc_1_clean, col=palette[1], add=T, boxwex=0.12, 
+#         at = 1:length(unique(spectralstats_dIc_1_clean$slope))-0.28, axes=FALSE,
+#         notch=TRUE, pch=".", xaxt="n")
+# 
+# # add uncorrected to the far left
+# boxplot(KGE_obs_alpha~slope, data=spectralstats_dIc_2_clean, col="lightgrey", add=T, boxwex=0.12, 
+#         at = 1:length(unique(spectralstats_dIc_2_clean$slope))-0.42, axes=FALSE,
+#         notch=TRUE, pch=".", xaxt="n")
+# 
+# boxplot(KGE_coscor_alpha~slope, data=spectralstats_coscor_clean, col=palette[4], add=T, boxwex=0.12, 
+#         at = 1:length(unique(spectralstats_coscor_clean$slope))+0.14, axes=FALSE,
+#         notch=TRUE, pch=".", xaxt="n")
+# 
+# boxplot(KGE_ccor_alpha~slope, data=spectralstats_ccor_clean, col=palette[5], add=T, boxwex=0.12, 
+#         at = 1:length(unique(spectralstats_ccor_clean$slope))+0.28, axes=FALSE,
+#         notch=TRUE, pch=".", xaxt="n")
+# 
+# abline(a=1,b=0)
+# 
+# dev.off()
+
+# ---------------------------------------------------------------------------
+# Setup matrix for 3 panel KGE vs slope plots
+# ---------------------------------------------------------------------------
+
+pdf(file = paste("../Plots/HSICalLib_20230614_KGE_slope_boxplots_final.pdf", 
+                 sep=""), width=12, height=12)
+
+layout(matrix(c(1, 1, 2, 3), nrow=2, ncol=2, byrow=TRUE))
+
+# ---------------------------------------------------------------------------
+# KGE vs slope boxplots
+# ---------------------------------------------------------------------------
+
+# --- KGE vs slope boxplot
+# pdf(file = "../Plots/HSICalLib_20230301_final_KGEvsslope_boxplot.pdf",
+#     width=8, height=8)
+
+par(mar=c(5,6,1,2), mgp=c(3.6,1.4,0)) 
+#mar=c(bottom, left, top, right) 
+#mgp=c(axis.title.position, axis.label.position, axis.line.position)
+
+boxplot(KGE_dIc~slope, data=spectralstats_dIc_2, col=palette[2], 
+        boxwex=boxwidth, 
+        ylim=c(0,1),
+        cex.axis=numsize+0.5,
+        pch=".", notch=TRUE, outcol=opalette[2],
+        xlab = list(expression("Slope ("~degree~")"),cex=textsize+0.5), 
+        ylab = list("KGE",cex=textsize+0.5))
+
+boxplot(KGE_dIc~slope, data=spectralstats_dIc_1, col=palette[1], 
+        add=T, boxwex=boxwidth, 
+        at = 1:length(unique(spectralstats_dIc_1$slope))-boxposition[2], axes=FALSE,
+        notch=TRUE, pch=".", outcol=opalette[1], xaxt="n")
+
+# add uncorrected to the far left
+boxplot(KGE_obs~slope, data=spectralstats_dIc_2, col=uncol, 
+        add=T, boxwex=boxwidth, 
+        at = 1:length(unique(spectralstats_dIc_2$slope))-boxposition[1], axes=FALSE,
+        notch=TRUE, pch=".", outcol=uncol, xaxt="n")
+
+boxplot(KGE_coscor~slope, data=spectralstats_coscor, col=palette[3], 
+        add=T, boxwex=boxwidth, 
+        at = 1:length(unique(spectralstats_coscor$slope))+boxposition[4], axes=FALSE,
+        notch=TRUE, pch=".", outcol=opalette[3],xaxt="n")
+
+boxplot(KGE_ccor~slope, data=spectralstats_ccor, col=palette[4], 
+        add=T, boxwex=boxwidth, 
+        at = 1:length(unique(spectralstats_ccor$slope))+boxposition[5], axes=FALSE,
+        notch=TRUE, pch=".", outcol=opalette[4], xaxt="n")
+
+putfigletter("A", font=2, cex=figlettersize, x=figletterx+0.03, y=figlettery, offset=c(0, 0))
+
+legend("bottomleft", 
+       legend=c("Uncorrected", 
+                expression(paste(Delta,"I Corrected")),
+                expression(paste(Delta,"I+ Corrected")),
+                "Cosine Corrected", "C-Corrected"), 
+       col=c("lightgrey",palette), pch=15, cex=legtextsize, bty ="n")
+
+#dev.off()
+
+# --- KGE_r vs slope boxplot
+# pdf(file = "../Plots/HSICalLib_20230310_final_KGE_rvsslope_boxplot.pdf",
+#     width=8, height=8)
+
+# 
+# par(mar=c(5,5.5,1,2), mgp=c(3.6,1.4,0)) 
+# #mar=c(bottom, left, top, right) 
+# #mgp=c(axis.title.position, axis.label.position, axis.line.position)
+# 
+# boxplot(KGE_dIc_r~slope, data=spectralstats_dIc_2, col=palette[2], 
+#         boxwex=boxwidth, 
+#         ylim=c(0.99,1),
+#         cex.axis=numsize+0.5,
+#         pch=".", notch=TRUE, outcol=opalette[2],
+#         xlab = list(expression("slope ("~degree~")"),cex=textsize+0.5), 
+#         ylab = list("r",cex=textsize+0.5))
+# 
+# boxplot(KGE_dIc_r~slope, data=spectralstats_dIc_1, col=palette[1], 
+#         add=T, boxwex=boxwidth, 
+#         at = 1:length(unique(spectralstats_dIc_1$slope))-boxposition[2], axes=FALSE,
+#         notch=TRUE, pch=".", outcol=opalette[1], xaxt="n")
+# 
+# # add uncorrected to the far left
+# boxplot(KGE_obs_r~slope, data=spectralstats_dIc_2, col=uncol, 
+#         add=T, boxwex=boxwidth, 
+#         at = 1:length(unique(spectralstats_dIc_2$slope))-boxposition[1], axes=FALSE,
+#         notch=TRUE, pch=".", outcol=uncol, xaxt="n")
+# 
+# boxplot(KGE_coscor_r~slope, data=spectralstats_coscor, col=palette[3], 
+#         add=T, boxwex=boxwidth, 
+#         at = 1:length(unique(spectralstats_coscor$slope))+boxposition[4], axes=FALSE,
+#         notch=TRUE, pch=".", outcol=opalette[3],xaxt="n")
+# 
+# boxplot(KGE_ccor_r~slope, data=spectralstats_ccor, col=palette[4], 
+#         add=T, boxwex=boxwidth, 
+#         at = 1:length(unique(spectralstats_ccor$slope))+boxposition[5], axes=FALSE,
+#         notch=TRUE, pch=".", outcol=opalette[4], xaxt="n")
+# 
+# putfigletter("B", font=2, cex=figlettersize, x=figletterx-0.03, y=figlettery, offset=c(0, 0))
+# 
+# #dev.off()
+
+# --- KGE_beta vs slope boxplot
+# pdf(file = "../Plots/HSICalLib_20230310_final_KGE_betavsslope_boxplot.pdf",
+#     width=8, height=8)
+
+par(mar=c(5,6,1,2), mgp=c(3.6,1.4,0)) 
+#mar=c(bottom, left, top, right) 
+#mgp=c(axis.title.position, axis.label.position, axis.line.position)
+
+boxplot(KGE_dIc_beta~slope, data=spectralstats_dIc_2, col=palette[2], 
+        boxwex=boxwidth, 
+        ylim=c(0.5,1.5),
+        cex.axis=numsize+0.5,
+        pch=".", notch=TRUE, outcol=opalette[2],
+        xlab = list(expression("Slope ("~degree~")"),cex=textsize+0.5), 
+        ylab = list(expression(beta),cex=textsize+0.5))
+
+boxplot(KGE_dIc_beta~slope, data=spectralstats_dIc_1, col=palette[1], 
+        add=T, boxwex=boxwidth, 
+        at = 1:length(unique(spectralstats_dIc_1$slope))-boxposition[2], axes=FALSE,
+        notch=TRUE, pch=".", outcol=opalette[1], xaxt="n")
+
+# add uncorrected to the far left
+boxplot(KGE_obs_beta~slope, data=spectralstats_dIc_2, col=uncol, 
+        add=T, boxwex=boxwidth, 
+        at = 1:length(unique(spectralstats_dIc_2$slope))-boxposition[1], axes=FALSE,
+        notch=TRUE, pch=".", outcol=uncol, xaxt="n")
+
+boxplot(KGE_coscor_beta~slope, data=spectralstats_coscor, col=palette[3], 
+        add=T, boxwex=boxwidth, 
+        at = 1:length(unique(spectralstats_coscor$slope))+boxposition[4], axes=FALSE,
+        notch=TRUE, pch=".", outcol=opalette[3],xaxt="n")
+
+boxplot(KGE_ccor_beta~slope, data=spectralstats_ccor, col=palette[4], 
+        add=T, boxwex=boxwidth, 
+        at = 1:length(unique(spectralstats_ccor$slope))+boxposition[5], axes=FALSE,
+        notch=TRUE, pch=".", outcol=opalette[4], xaxt="n")
+
+abline(a=1,b=0)
+
+putfigletter("B", font=2, cex=figlettersize, x=figletterx+0.03, y=figlettery+0.03, offset=c(0, 0))
+
+#dev.off()
+
+# --- KGE_alpha vs slope boxplot
+# pdf(file = "../Plots/HSICalLib_20230310_final_KGE_alphavsslope_boxplot.pdf",
+#     width=8, height=8)
+
+par(mar=c(5,5,1,2), mgp=c(3.6,1.4,0)) 
+#mar=c(bottom, left, top, right) 
+#mgp=c(axis.title.position, axis.label.position, axis.line.position)
+
+boxplot(KGE_dIc_alpha~slope, data=spectralstats_dIc_2, col=palette[2], 
+        boxwex=boxwidth, 
+        ylim=c(0.5,1.5),
+        cex.axis=numsize+0.5,
+        pch=".", notch=TRUE, outcol=opalette[2],
+        xlab = list(expression("Slope ("~degree~")"),cex=textsize+0.5), 
+        ylab = list(expression(alpha),cex=textsize+0.5))
+
+boxplot(KGE_dIc_alpha~slope, data=spectralstats_dIc_1, col=palette[1], 
+        add=T, boxwex=boxwidth, 
+        at = 1:length(unique(spectralstats_dIc_1$slope))-boxposition[2], axes=FALSE,
+        notch=TRUE, pch=".", outcol=opalette[1], xaxt="n")
+
+# add uncorrected to the far left
+boxplot(KGE_obs_alpha~slope, data=spectralstats_dIc_2, col=uncol, 
+        add=T, boxwex=boxwidth, 
+        at = 1:length(unique(spectralstats_dIc_2$slope))-boxposition[1], axes=FALSE,
+        notch=TRUE, pch=".", outcol=uncol, xaxt="n")
+
+boxplot(KGE_coscor_alpha~slope, data=spectralstats_coscor, col=palette[3], 
+        add=T, boxwex=boxwidth, 
+        at = 1:length(unique(spectralstats_coscor$slope))+boxposition[4], axes=FALSE,
+        notch=TRUE, pch=".", outcol=opalette[3],xaxt="n")
+
+
+boxplot(KGE_ccor_alpha~slope, data=spectralstats_ccor, col=palette[4], 
+        add=T, boxwex=boxwidth, 
+        at = 1:length(unique(spectralstats_ccor$slope))+boxposition[5], axes=FALSE,
+        notch=TRUE, pch=".", outcol=opalette[4], xaxt="n")
+
+abline(a=1,b=0)
+
+putfigletter("C", font=2, cex=figlettersize, x=figletterx-0.03, y=figlettery+0.03, offset=c(0, 0))
+
+#dev.off()
+
+dev.off()
+
+
+# ---------------------------------------------------------------------------
+# Setup matrix for 3 panel KGE vs. aspect plots
+# ---------------------------------------------------------------------------
+
+pdf(file = paste("../Plots/HSICalLib_20230614_KGE_aspect_boxplots_final.pdf", 
+                 sep=""), width=12, height=12)
+
+layout(matrix(c(1, 1, 2, 3), nrow=2, ncol=2, byrow=TRUE))
+
+# ---------------------------------------------------------------------------
+# KGE vs aspect boxplots
+# ---------------------------------------------------------------------------
+
+# --- KGE vs aspect boxplot
+# pdf(file = "../Plots/HSICalLib_20230301_final_KGEvsaspect_boxplot.pdf",
+#     width=8, height=8)
+
+par(mar=c(5,6,1,2), mgp=c(3.6,1.4,0)) 
+#mar=c(bottom, left, top, right) 
+#mgp=c(axis.title.position, axis.label.position, axis.line.position)
+
+boxplot(KGE_dIc~aspect, data=spectralstats_dIc_2, col=palette[2], 
+        boxwex=boxwidth, 
+        ylim=c(0,1),
+        cex.axis=numsize+0.5,
+        pch=".", notch=TRUE, outcol=opalette[2],
+        xlab = list(expression("Aspect ("~degree~")"),cex=textsize+0.5), 
+        ylab = list("KGE",cex=textsize+0.5))
+
+boxplot(KGE_dIc~aspect, data=spectralstats_dIc_1, col=palette[1], 
+        add=T, boxwex=boxwidth, 
+        at = 1:length(unique(spectralstats_dIc_1$aspect))-boxposition[2], axes=FALSE,
+        notch=TRUE, pch=".", outcol=opalette[1], xaxt="n")
+
+# add uncorrected to the far left
+boxplot(KGE_obs~aspect, data=spectralstats_dIc_2, col=uncol, 
+        add=T, boxwex=boxwidth, 
+        at = 1:length(unique(spectralstats_dIc_2$aspect))-boxposition[1], axes=FALSE,
+        notch=TRUE, pch=".", outcol=uncol, xaxt="n")
+
+boxplot(KGE_coscor~aspect, data=spectralstats_coscor, col=palette[3], 
+        add=T, boxwex=boxwidth, 
+        at = 1:length(unique(spectralstats_coscor$aspect))+boxposition[4], axes=FALSE,
+        notch=TRUE, pch=".", outcol=opalette[3],xaxt="n")
+
+boxplot(KGE_ccor~aspect, data=spectralstats_ccor, col=palette[4], 
+        add=T, boxwex=boxwidth, 
+        at = 1:length(unique(spectralstats_ccor$aspect))+boxposition[5], axes=FALSE,
+        notch=TRUE, pch=".", outcol=opalette[4], xaxt="n")
+
+putfigletter("A", font=2, cex=figlettersize, x=figletterx+0.03, y=figlettery, offset=c(0, 0))
+
+#dev.off()
+
+# --- KGE_r vs aspect boxplot
+# pdf(file = "../Plots/HSICalLib_20230310_final_KGE_rvsaspect_boxplot.pdf",
+#     width=8, height=8)
+
+# 
+# par(mar=c(5,5.5,1,2), mgp=c(3.6,1.4,0)) 
+# #mar=c(bottom, left, top, right) 
+# #mgp=c(axis.title.position, axis.label.position, axis.line.position)
+# 
+# boxplot(KGE_dIc_r~aspect, data=spectralstats_dIc_2, col=palette[2], 
+#         boxwex=boxwidth, 
+#         ylim=c(0.99,1),
+#         cex.axis=numsize+0.5,
+#         pch=".", notch=TRUE, outcol=opalette[2],
+#         xlab = list(expression("Aspect ("~degree~")"),cex=textsize+0.5), 
+#         ylab = list("r",cex=textsize+0.5))
+# 
+# boxplot(KGE_dIc_r~aspect, data=spectralstats_dIc_1, col=palette[1], 
+#         add=T, boxwex=boxwidth, 
+#         at = 1:length(unique(spectralstats_dIc_1$aspect))-boxposition[2], axes=FALSE,
+#         notch=TRUE, pch=".", outcol=opalette[1], xaxt="n")
+# 
+# # add uncorrected to the far left
+# boxplot(KGE_obs_r~aspect, data=spectralstats_dIc_2, col=uncol, 
+#         add=T, boxwex=boxwidth, 
+#         at = 1:length(unique(spectralstats_dIc_2$aspect))-boxposition[1], axes=FALSE,
+#         notch=TRUE, pch=".", outcol=uncol, xaxt="n")
+# 
+# boxplot(KGE_coscor_r~aspect, data=spectralstats_coscor, col=palette[3], 
+#         add=T, boxwex=boxwidth, 
+#         at = 1:length(unique(spectralstats_coscor$aspect))+boxposition[4], axes=FALSE,
+#         notch=TRUE, pch=".", outcol=opalette[3],xaxt="n")
+# 
+# boxplot(KGE_ccor_r~aspect, data=spectralstats_ccor, col=palette[4], 
+#         add=T, boxwex=boxwidth, 
+#         at = 1:length(unique(spectralstats_ccor$aspect))+boxposition[5], axes=FALSE,
+#         notch=TRUE, pch=".", outcol=opalette[4], xaxt="n")
+# 
+# putfigletter("B", font=2, cex=figlettersize, x=figletterx-0.03, y=figlettery, offset=c(0, 0))
+# 
+# #dev.off()
+
+# --- KGE_beta vs aspect boxplot
+# pdf(file = "../Plots/HSICalLib_20230310_final_KGE_betavsaspect_boxplot.pdf",
+#     width=8, height=8)
+
+par(mar=c(5,6,1,2), mgp=c(3.6,1.4,0)) 
+#mar=c(bottom, left, top, right) 
+#mgp=c(axis.title.position, axis.label.position, axis.line.position)
+
+boxplot(KGE_dIc_beta~aspect, data=spectralstats_dIc_2, col=palette[2], 
+        boxwex=boxwidth, 
+        ylim=c(0.5,1.5),
+        cex.axis=numsize+0.5,
+        pch=".", notch=TRUE, outcol=opalette[2],
+        xlab = list(expression("Aspect ("~degree~")"),cex=textsize+0.5), 
+        ylab = list(expression(beta),cex=textsize+0.5))
+
+boxplot(KGE_dIc_beta~aspect, data=spectralstats_dIc_1, col=palette[1], 
+        add=T, boxwex=boxwidth, 
+        at = 1:length(unique(spectralstats_dIc_1$aspect))-boxposition[2], axes=FALSE,
+        notch=TRUE, pch=".", outcol=opalette[1], xaxt="n")
+
+# add uncorrected to the far left
+boxplot(KGE_obs_beta~aspect, data=spectralstats_dIc_2, col=uncol, 
+        add=T, boxwex=boxwidth, 
+        at = 1:length(unique(spectralstats_dIc_2$aspect))-boxposition[1], axes=FALSE,
+        notch=TRUE, pch=".", outcol=uncol, xaxt="n")
+
+boxplot(KGE_coscor_beta~aspect, data=spectralstats_coscor, col=palette[3], 
+        add=T, boxwex=boxwidth, 
+        at = 1:length(unique(spectralstats_coscor$aspect))+boxposition[4], axes=FALSE,
+        notch=TRUE, pch=".", outcol=opalette[3],xaxt="n")
+
+boxplot(KGE_ccor_beta~aspect, data=spectralstats_ccor, col=palette[4], 
+        add=T, boxwex=boxwidth, 
+        at = 1:length(unique(spectralstats_ccor$aspect))+boxposition[5], axes=FALSE,
+        notch=TRUE, pch=".", outcol=opalette[4], xaxt="n")
+
+putfigletter("B", font=2, cex=figlettersize, x=figletterx+0.03, y=figlettery+0.03, offset=c(0, 0))
+
+abline(a=1,b=0)
+
+#dev.off()
+
+# --- KGE_alpha vs aspect boxplot
+# pdf(file = "../Plots/HSICalLib_20230310_final_KGE_alphavsaspect_boxplot.pdf",
+#     width=8, height=8)
+
+par(mar=c(5,5,1,2), mgp=c(3.6,1.4,0)) 
+#mar=c(bottom, left, top, right) 
+#mgp=c(axis.title.position, axis.label.position, axis.line.position)
+
+boxplot(KGE_dIc_alpha~aspect, data=spectralstats_dIc_2, col=palette[2], 
+        boxwex=boxwidth, 
+        ylim=c(0.5,1.5),
+        cex.axis=numsize+0.5,
+        pch=".", notch=TRUE, outcol=opalette[2],
+        xlab = list(expression("Aspect ("~degree~")"),cex=textsize+0.5), 
+        ylab = list(expression(alpha),cex=textsize+0.5))
+
+boxplot(KGE_dIc_alpha~aspect, data=spectralstats_dIc_1, col=palette[1], 
+        add=T, boxwex=boxwidth, 
+        at = 1:length(unique(spectralstats_dIc_1$aspect))-boxposition[2], axes=FALSE,
+        notch=TRUE, pch=".", outcol=opalette[1], xaxt="n")
+
+# add uncorrected to the far left
+boxplot(KGE_obs_alpha~aspect, data=spectralstats_dIc_2, col=uncol, 
+        add=T, boxwex=boxwidth, 
+        at = 1:length(unique(spectralstats_dIc_2$aspect))-boxposition[1], axes=FALSE,
+        notch=TRUE, pch=".", outcol=uncol, xaxt="n")
+
+boxplot(KGE_coscor_alpha~aspect, data=spectralstats_coscor, col=palette[3], 
+        add=T, boxwex=boxwidth, 
+        at = 1:length(unique(spectralstats_coscor$aspect))+boxposition[4], axes=FALSE,
+        notch=TRUE, pch=".", outcol=opalette[3],xaxt="n")
+
+
+boxplot(KGE_ccor_alpha~aspect, data=spectralstats_ccor, col=palette[4], 
+        add=T, boxwex=boxwidth, 
+        at = 1:length(unique(spectralstats_ccor$aspect))+boxposition[5], axes=FALSE,
+        notch=TRUE, pch=".", outcol=opalette[4], xaxt="n")
+
+putfigletter("C", font=2, cex=figlettersize, x=figletterx-0.03, y=figlettery+0.03, offset=c(0, 0))
+
+abline(a=1,b=0)
+
+#dev.off()
+
+dev.off()
+
+
+# ---------------------------------------------------------------------------
+# Setup layout for 2 panel obsI, dIc, & ref vs wavelength plots
+# ---------------------------------------------------------------------------
+
+pdf(file = paste("../Plots/HSICalLib_20230614_obsI_dIc_refI_spectra_final.pdf", sep="") ,
+    width=16, height=8)
+
+layout(matrix(c(1, 2), nrow=1, ncol=2, byrow=TRUE))
+
+# ---------------------------------------------------------------------------
+# try to find 1 representative sample for this plot
+# ---------------------------------------------------------------------------
+
+# summary(spectralstats_dIc_2)
+# 
+# # ----------
+# # find samples with RMSE as clos to the mean as possible
+# sub <- spectralstats_dIc_2 %>% filter (between(RMSE_obs,0.0202,0.0203))
+# repnums <- sort(unique(sub$HSInumber))
+# 
+# # These "ideal" HSI numbers selected based on plots of obsI, dIc, and repI 
+# repnums <- c('894','821','743','688','562','510','456')
+
+# ---------------------------------------------------------------------------
+# Plots with obsI, refI, and dIc
+# ---------------------------------------------------------------------------
+
+#for (i in 1:length(repnums)) {
+
+# ----------
+# labeled by slope 
+
+# pdf(file = paste("../Plots/HSICalLib_20230314_final_obsIdIcspectra_byslope_HSInumber_456.pdf", 
+#                sep=""), width=8, height=8)
+
+par(mar=c(5,5,2,1)) #bottom, left, top, right
+for(s in 1:length(snum)) {
+  plotdf <- pga_dI_refI_melt_slm_dIp_dIc_2 %>% filter (HSInumber==456)
+  plotdf2 <- plotdf %>% filter (slope==snum[s])
+  
+  for(a in 1:length(anum)) {
+    
+    plotdf3 <- plotdf2 %>% filter (aspect==anum[a])
+    
+    if(s==1 & a==1 ){ # first orientation, plot obsI & dIc
+      plot(obsI~wavelength, data=plotdf3, type="l",
+           col=uncol, lwd=linewidth,
+           xlim=c(400,1000), 
+           ylim=c(0,0.5), cex.axis =numsize,
+           xlab=list(expression(lambda~"(nm)"),cex=textsize) , 
+           ylab=list("Reflectance Intensity (RI)",cex=textsize) )
+      
+      lines(dIc~wavelength, data=plotdf3, cex=textsize, col=spalette[s])
+      
+    } # close if loop
+    
+    else { # remaining orientations, add lines for obsI & dIc
+      lines(dIc~wavelength, data=plotdf3, 
+            lwd=linewidth,
+             col=spalette[s])
+      
+      lines(obsI~wavelength, data=plotdf3, 
+            lwd=linewidth,
+            col=uncol)
+      
+    } # close the else loop
+  } # close the aspect loop
+} # close the slope loop
+    
+lines(refI~wavelength, data=plotdf3, lty=reflty, lwd=reflwd, col=refcol)
+
+color.legend(880,0.01,910,0.11,c(expression(paste(" 10",degree))
+                                 ," Slope",
+                                 expression(paste(" 60",degree))),
+             rect.col=spalette,
+             gradient="y",align="rb",cex=legtextsize)
+
+legend("bottomleft", inset=c(0.015,0.011), cex=legtextsize,
+       legend=c("Uncorrected",expression(paste("0", degree," Slope (Reference)", sep=""))),
+       col=c(uncol, refcol), lty=1:reflty, lwd=leglwd:reflwd, bty ="n")
+
+putfigletter("A", font=2, cex=figlettersize, x=figletterx+0.12, y=figlettery-0.02, offset=c(0, 0))
+
+#dev.off()
+
+#} # close the i loop
+
+# ----------
+# color dIc by aspect
+
+# pdf(file = paste("../Plots/HSICalLib_20230314_final_obsIdIcspectra_byaspect_HSInumber_456.pdf", 
+#                  sep=""), width=8, height=8)
+
+par(mar=c(5,5,2,1)) #bottom, left, top, right
+for(s in 1:length(snum)) {
+  plotdf <- pga_dI_refI_melt_slm_dIp_dIc_2 %>% filter (HSInumber==456)
+  plotdf2 <- plotdf %>% filter (slope==snum[s])
+  
+  for(a in 1:length(anum)) {
+    
+    plotdf3 <- plotdf2 %>% filter (aspect==anum[a])
+    
+    if(s==1 & a==1 ){ # first orientation, plot obsI & dIc
+      plot(obsI~wavelength, data=plotdf3, type="l",
+           col=uncol, 
+           xlim=c(400,1000), 
+           ylim=c(0,0.5), cex.axis =numsize,
+           xlab=list(expression(lambda~"(nm)"),cex=textsize) , 
+           ylab=list("Reflectance Intensity (RI)",cex=textsize) )
+      
+      lines(dIc~wavelength, data=plotdf3, 
+            lwd=linewidth+1, col=apalette[a])
+      
+    } # close if loop
+     
+    else { # remaining orientations, add lines for obsI & dIc
+      lines(dIc~wavelength, data=plotdf3, 
+            lwd=linewidth, col=apalette[a])
+      
+      lines(obsI~wavelength, data=plotdf3, 
+            lwd=linewidth, col=uncol)
+      
+    } # close the else loop
+  } # close the aspect loop
+} # close the slope loop
+
+lines(refI~wavelength, data=plotdf3, lty=reflty, lwd=reflwd, col=refcol)
+
+color.legend(880,0.01,910,0.11,c(expression(paste(" 0",degree))
+                                 ," Aspect",
+                                 expression(paste(" 180",degree))),
+             rect.col=apalette,
+             gradient="y",align="rb",cex=legtextsize)
+
+legend("bottomleft", inset=c(0.015,0.011), cex=legtextsize,
+       legend=c("Uncorrected",expression(paste("0", degree," Slope (Reference)", sep=""))),
+       col=c(uncol, refcol), lty=1:reflty, lwd=leglwd:reflwd, bty ="n")
+
+putfigletter("B", font=2, cex=figlettersize, x=figletterx+0.12, y=figlettery-0.02, offset=c(0, 0))
+
+#dev.off()
+
+dev.off()
+
+# ---------------------------------------------------------------------------
+# Setup layout for 2 panel obsI & ref vs wavelength plots
+# ---------------------------------------------------------------------------
+
+pdf(file = paste("../Plots/HSICalLib_20230614_obsI_spectra_final.pdf", sep="") ,
+    width=16, height=8)
+
+layout(matrix(c(1, 2), nrow=1, ncol=2, byrow=TRUE))
+
+# ---------------------------------------------------------------------------
+# Plots with obsI spectra
+# ---------------------------------------------------------------------------
+
+# ----------
+# color obsI by slope
+
+# pdf(file = paste("../Plots/HSICalLib_20230314_final_obsIspectra_byslope_HSInumber_456.pdf", 
+#                  sep=""), width=8, height=8)
+
+par(mar=c(5,5,2,1)) #bottom, left, top, right
+for(s in 1:length(snum)) {
+  plotdf <- pga_dI_refI_melt_slm_dIp_dIc_2 %>% filter (HSInumber==456)
+  plotdf2 <- plotdf %>% filter (slope==snum[s])
+  
+  for(a in 1:length(anum)) {
+    
+    plotdf3 <- plotdf2 %>% filter (aspect==anum[a])
+    
+    if(s==1 & a==1 ){ # first orientation, plot obsI
+      
+      plot(obsI~wavelength, data=plotdf3, type="l", 
+           col=spalette[s], # color obsI by slope
+           xlim=c(400,1000), 
+           ylim=c(0,0.5), cex.axis =numsize,
+           xlab=list(expression(lambda~"(nm)"),cex=textsize) , 
+           ylab=list("Reflectance Intensity (RI)",cex=textsize) )
+      
+    } # close if loop
+    
+    else { # remaining orientations, add lines for obsI 
+      lines(obsI~wavelength, data=plotdf3, 
+            cex=textsize,
+            col=spalette[s])
+      
+    } # close the else loop
+  } # close the aspect loop
+} # close the slope loop
+
+lines(refI~wavelength, data=plotdf3, lty=reflty, lwd=reflwd, col=refcol)
+
+color.legend(880,0.01,910,0.11,c(expression(paste(" 10",degree))
+                                 ," Slope",
+                                 expression(paste(" 60",degree))),
+             rect.col=spalette,
+             gradient="y",align="rb",cex=legtextsize)
+
+legend("bottomleft", inset=c(0.015,0.011), 
+       legend=expression(paste("0", degree," Slope (Reference)", sep="")), cex=legtextsize,
+       col=c(refcol), lty=reflty, lwd=reflwd, bty ="n")
+
+putfigletter("A", font=2, cex=figlettersize, x=figletterx+0.12, y=figlettery-0.02, offset=c(0, 0))
+
+#dev.off()
+
+# ----------
+# color by aspect
+
+# pdf(file = paste("../Plots/HSICalLib_20230314_final_obsIspectra_byaspect_HSInumber_456.pdf", 
+#                  sep=""), width=8, height=8)
+
+par(mar=c(5,5,2,1)) #bottom, left, top, right
+for(s in 1:length(snum)) {
+  plotdf <- pga_dI_refI_melt_slm_dIp_dIc_2 %>% filter (HSInumber==456)
+  plotdf2 <- plotdf %>% filter (slope==snum[s])
+  
+  for(a in 1:length(anum)) {
+    
+    plotdf3 <- plotdf2 %>% filter (aspect==anum[a])
+    
+    if(s==1 & a==1 ){ # first orientation, plot obsI
+      
+      plot(obsI~wavelength, data=plotdf3, type="l", 
+           #pch=".", 
+           col=apalette[a], # color obsI by aspect
+           xlim=c(400,1000), 
+           ylim=c(0,0.5), cex.axis =numsize,
+           xlab=list(expression(lambda~"(nm)"),cex=textsize) , 
+           ylab=list("Reflectance Intensity (RI)",cex=textsize) )
+      
+    } # close if loop
+    
+    else { # remaining orientations, add lines for obsI 
+      lines(obsI~wavelength, data=plotdf3, lwd=linewidth,
+            col=apalette[a])
+      
+    } # close the else loop
+  } # close the aspect loop
+} # close the slope loop
+
+lines(refI~wavelength, data=plotdf3, lty=reflty, lwd=reflwd, col=refcol)
+
+legend("bottomleft", inset=c(0.015,0.011), 
+       legend=expression(paste("0", degree," Slope (Reference)", sep="")), cex=legtextsize,
+       col=c(refcol), lty=reflty, lwd=reflwd, bty ="n")
+
+color.legend(880,0.01,910,0.11,c(expression(paste(" 0",degree))
+                                 ," Aspect",
+                                 expression(paste(" 180",degree))),
+             rect.col=apalette,
+             gradient="y",align="rb",cex=legtextsize)
+
+putfigletter("B", font=2, cex=figlettersize, x=figletterx+0.12, y=figlettery-0.02, offset=c(0, 0))
+
+#dev.off()
+
+dev.off()
+
+# # ---------------------------------------------------------------------------
+# # Plots with dIc spectra
+# # ---------------------------------------------------------------------------
+# 
+# # ----------
+# # color dIc by slope
+# 
+# pdf(file = paste("../Plots/HSICalLib_20230314_dIcspectra_byslope_HSInumber_456.pdf", 
+#                  sep=""), width=8, height=8)
+# 
+# for(s in 1:length(snum)) {
+#   plotdf <- pga_dI_refI_melt_slm_rgbIR %>% filter (HSInumber==456)
+#   plotdf2 <- plotdf %>% filter (slope==snum[s])
+#   
+#   for(a in 1:length(anum)) {
+#     
+#     plotdf3 <- plotdf2 %>% filter (aspect==anum[a])
+#     
+#     if(s==1 & a==1 ){ # first orientation, plot dIc
+#       
+#       plot(dIc~wavelength, data=plotdf3, type="l", 
+#            col=spalette[s], # color dIc by slope
+#            xlim=c(400,1000), 
+#            ylim=c(0,0.5), cex.axis =numsize,
+#            xlab=list(expression(lambda~"(nm)"),cex=textsize) , 
+#            ylab=list("Reflectance Intensity (RI)",cex=textsize) )
+#       
+#     } # close if loop
+#     
+#     else { # remaining orientations, add lines for dIc 
+#       lines(dIc~wavelength, data=plotdf3, lwd=linewidth, col=spalette[s])
+#       
+#     } # close the else loop
+#   } # close the aspect loop
+# } # close the slope loop
+# 
+# lines(refI~wavelength, data=plotdf3, lty=reflty, lwd=reflwd, col=refcol)
+# 
+# color.legend(880,0.01,910,0.11,c(expression(paste(" 10",degree))
+#                                  ," Slope",
+#                                  expression(paste(" 60",degree))),
+#              rect.col=spalette,
+#              gradient="y",align="rb",cex=1)
+# 
+# legend("bottomleft", inset=c(0.015,0.011), 
+#        legend=c("Reference"), 
+#        col=c(refcol), lty=reflty, lwd=reflwd, bty ="n")
+# 
+# dev.off()
+# 
+# # ----------
+# # color by aspect
+# 
+# pdf(file = paste("../Plots/HSICalLib_20230314_dIcspectra_byaspect_HSInumber_456.pdf", 
+#                  sep=""), width=8, height=8)
+# 
+# for(s in 1:length(snum)) {
+#   plotdf <- pga_dI_refI_melt_slm_rgbIR %>% filter (HSInumber==456)
+#   plotdf2 <- plotdf %>% filter (slope==snum[s])
+#   
+#   for(a in 1:length(anum)) {
+#     
+#     plotdf3 <- plotdf2 %>% filter (aspect==anum[a])
+#     
+#     if(s==1 & a==1 ){ # first orientation, plot dIc
+#       
+#       plot(dIc~wavelength, data=plotdf3, type="l", 
+#            col=apalette[a], # color dIc by aspect
+#            xlim=c(400,1000), 
+#            ylim=c(0,0.5), cex.axis =numsize,
+#            xlab=list(expression(lambda~"(nm)"),cex=textsize) , 
+#            ylab=list("Reflectance Intensity (RI)",cex=textsize) ) 
+#       
+#     } # close if loop
+#     
+#     else { # remaining orientations, add lines for dIc
+#       lines(dIc~wavelength, data=plotdf3, lwd=linewidth, col=apalette[a])
+#       
+#     } # close the else loop
+#   } # close the aspect loop
+# } # close the slope loop
+# 
+# lines(refI~wavelength, data=plotdf3, lty=reflty, lwd=reflwd, col=refcol)
+# 
+# legend("bottomleft", inset=c(0.015,0.011), 
+#        legend=c("Reference"), 
+#        col=c(refcol), lty=reflty, lwd=reflwd, bty ="n")
+# 
+# 
+# color.legend(880,0.01,910,0.11,c(expression(paste(" 0",degree))
+#                                  ," Aspect",
+#                                  expression(paste(" 180",degree))),
+#              rect.col=apalette,
+#              gradient="y",align="rb",cex=1)
+# 
+# dev.off()
+
+# ---------------------------------------------------------------------------
+# Setup layout for 2 (or 4) panel RMSE & NSE vs wavelength plots
+# ---------------------------------------------------------------------------
+
+pdf(file = paste("../Plots/HSICalLib_20230614_dIc_RMSE_spectra_final.pdf", sep="") ,
+    width=16, height=8)
+
+#layout(matrix(c(1, 2, 3, 4), nrow=2, ncol=2, byrow=TRUE))
+layout(matrix(c(1, 2), nrow=1, ncol=2, byrow=TRUE))
+
+# ---------------------------------------------------------------------------
+# RMSE vs wavelength (dIc_2)
+# ---------------------------------------------------------------------------
+
+# ----------
+# labeled by slope
+
+# pdf(file = paste("../Plots/HSICalLib_20230314_obsIdIc_RMSEspectra_byslope.pdf", 
+#                  sep=""), width=8, height=8)
+
+par(mar=c(5,5,2,1)) #bottom, left, top, right
+for(s in 1:length(snum)) {
+  
+  plotdf2 <- spectralstats_dIc_w_s_2 %>% filter (slope==snum[s])
+  
+  if( s==1 ){ # first orientation, plot RMSE_obsI & RMSE_dIc
+    plot(RMSE_obs~wavelength, data=plotdf2, type="l", lwd=linewidth+0.5,
+         col="darkgrey",
+         xlim=c(400,1000), 
+         ylim=c(0,0.15), 
+         cex.axis =numsize,
+         xlab=list(expression(lambda~"(nm)"),cex=textsize) , 
+         ylab=list("RMSE",cex=textsize) )
+    
+    lines(RMSE_dIc~wavelength, data=plotdf2, lwd=linewidth+0.5, col=spalette[s])
+    
+  } # close if loop
+  
+  else { # remaining orientations, add lines for obsI & dIc
+    lines(RMSE_dIc~wavelength, data=plotdf2, lwd=linewidth+0.5, col=spalette[s])
+    lines(RMSE_obs~wavelength, data=plotdf2, lwd=linewidth+0.5, col="darkgrey")
+    
+  } # close the else loop
+} # close the slope loop
+
+color.legend(420,0.10,450,0.13,c(expression(paste(" 10",degree))
+                                 ," Slope",
+                                 expression(paste(" 60",degree))),
+             rect.col=spalette,
+             gradient="y",align="rb",cex=legtextsize)
+
+
+legend("topright", inset=c(0.015,0.011), 
+       legend=c("Uncorrected"), cex=legtextsize,
+       col=c("darkgrey"), lty=1, lwd=leglwd, bty ="n")
+
+putfigletter("A", font=2, cex=figlettersize, x=figletterx+0.12, y=figlettery-0.02, offset=c(0, 0))
+
+#dev.off()
+
+# ----------
+# labeled by aspect
+
+# pdf(file = paste("../Plots/HSICalLib_20230314_obsIdIc_RMSEspectra_byaspect.pdf", 
+#                  sep=""), width=8, height=8)
+
+par(mar=c(5,5,2,2)) #bottom, left, top, right
+for(a in 1:length(anum)) {
+  
+  plotdf2 <- spectralstats_dIc_w_a_2 %>% filter (aspect==anum[a])
+  
+  if( a==1 ){ # first orientation, plot RMSE_obsI & RMSE_dIc
+    plot(RMSE_obs~wavelength, data=plotdf2, type="l", lwd=linewidth+0.5,
+         col="darkgrey",
+         xlim=c(400,1000),
+         ylim=c(0,0.15),
+         cex.axis =numsize,
+         xlab=list(expression(lambda~"(nm)"), cex=textsize),
+         ylab=list("RMSE", cex=textsize) )
+    
+    lines(RMSE_dIc~wavelength, data=plotdf2, lwd=linewidth+0.5, col=apalette[a])
+    
+  } # close if loop
+  
+  else { # remaining orientations, add lines for obsI & dIc
+    lines(RMSE_dIc~wavelength, data=plotdf2, 
+          lwd=linewidth+0.5,
+          col=apalette[a])
+    
+    lines(RMSE_obs~wavelength, data=plotdf2, 
+          lwd=linewidth+0.5,
+          col="darkgrey")
+    
+  } # close the else loop
+} # close the aspect loop
+
+color.legend(420,0.10,450,0.13,c(expression(paste(" 0",degree))
+                                 ," Aspect",
+                                 expression(paste(" 180",degree))),
+             rect.col=apalette,
+             gradient="y",align="rb", cex=legtextsize)
+
+legend("topright", inset=c(0.015,0.011), 
+       legend=c("Uncorrected"), cex=legtextsize,
+       col=c("darkgrey"), lty=1, lwd=leglwd, bty ="n")
+
+putfigletter("B", font=2, cex=figlettersize, x=figletterx+0.12, y=figlettery-0.02, offset=c(0, 0))
+
+#dev.off()
+
+dev.off()
+
+# # ---------------------------------------------------------------------------
+# # RMSE and KGE vs wavelength (ccor)
+# # ---------------------------------------------------------------------------
+# 
+# # ----------
+# # labeled by aspect
+# 
+# # pdf(file = paste("../Plots/HSICalLib_20230314_obsIccor_RMSEspectra_byaspect.pdf", 
+# #                  sep=""), width=8, height=8)
+# 
+# for(a in 1:length(anum)) {
+#   
+#   plotdf2 <- spectralstats_ccor_w_a %>% filter (aspect==anum[a])
+#   
+#   if( a==1 ){ # first orientation, plot RMSE_obsI & RMSE_dIc
+#     plot(RMSE_obs~wavelength, data=plotdf2, type="l", lwd=linewidth+0.5,
+#          col="lightgrey",
+#          xlim=c(400,1000), 
+#          ylim=c(0,0.15), 
+#          cex.axis =numsize,
+#          xlab=list(expression(lambda~"(nm)"),cex=textsize) , 
+#          ylab=list("RMSE (White/Dark Corrected Reflectance Intensity)",cex=textsize) )
+#     
+#     lines(RMSE_ccor~wavelength, data=plotdf2, 
+#           lwd=linewidth,
+#           col=apalette[a])
+#     
+#   } # close if loop
+#   
+#   else { # remaining orientations, add lines for obsI & dIc
+#     lines(RMSE_ccor~wavelength, data=plotdf2, lwd=linewidth, col=apalette[a])
+#     lines(RMSE_obs~wavelength, data=plotdf2, lwd=linewidth, col=uncol)
+#     
+#   } # close the else loop
+# } # close the aspect loop
+# 
+# # color.legend(420,0.11,450,0.14,c(expression(paste(" 0",degree))
+# #                                 ," Aspect",
+# #                                 expression(paste(" 180",degree))),
+# #              rect.col=apalette, gradient="y",align="rb", cex=1)
+# # 
+# # legend("topright", inset=c(0.015,0.011), 
+# #        legend=c("Uncorrected"), 
+# #        col=c(uncol), lty=1, lwd=linewidth, bty ="n")
+# 
+# putfigletter("D", font=2, cex=figlettersize, x=figletterx+0.03, y=figlettery, offset=c(0, 0))
+# 
+# #dev.off()
+# 
+# 
+# # ----------
+# # labeled by slope
+# 
+# # pdf(file = paste("../Plots/HSICalLib_20230314_obsIccor_RMSEspectra_byslope.pdf", 
+# #                  sep=""), width=8, height=8)
+# 
+# for(s in 1:length(snum)) {
+#   
+#   plotdf2 <- spectralstats_ccor_w_s %>% filter (slope==snum[s])
+#   
+#   if( s==1 ){ # first orientation, plot RMSE_obsI & RMSE_dIc
+#     plot(RMSE_obs~wavelength, data=plotdf2, type="l", lwd=linewidth+0.5,
+#          col="lightgrey",
+#          xlim=c(400,1000), 
+#          ylim=c(0,0.15), 
+#          cex.axis =numsize, 
+#          xlab=list(expression(lambda~"(nm)"),cex=textsize) , 
+#          ylab=list("RMSE (White/Dark Corrected Reflectance Intensity)",cex=textsize) )
+#     
+#     lines(RMSE_ccor~wavelength, data=plotdf2, lwd=linewidth, col=spalette[s])
+#     
+#   } # close if loop
+#   
+#   else { # remaining orientations, add lines for obsI & dIc
+#     lines(RMSE_ccor~wavelength, data=plotdf2, lwd=linewidth, cex=linewidth, col=spalette[s])
+#     lines(RMSE_obs~wavelength, data=plotdf2, lwd=linewidth, cex=linewidth, col=uncol)
+#     
+#   } # close the else loop
+# } # close the slope loop
+# 
+# # color.legend(420,0.11,450,0.14,c(expression(paste(" 10",degree))
+# #                                 ," Slope",
+# #                                 expression(paste(" 60",degree))),
+# #              rect.col=spalette,
+# #              gradient="y",align="rb",cex=1)
+# # 
+# # legend("topright", inset=c(0.015,0.011), 
+# #        legend=c("Uncorrected"), 
+# #        col=c(uncol), lty=1, lwd=linewidth, bty ="n")
+# 
+# putfigletter("C", font=2, cex=figlettersize, x=figletterx+0.03, y=figlettery, offset=c(0, 0))
+# 
+# #dev.off()
+# 
+# dev.off()
+
+
+# # ---------------------------------------------------------------------------
+# # Histograms of soil properties
+# # ---------------------------------------------------------------------------
+# 
+# # ----------
+# # plots with C data 
+# 
+# pdf(file = "../Plots/HSICalLib_20230316_logvolC_hist.pdf", width=8, height=8)
+# hist(p_plots$logvolC, 
+#      xlab=list("log(OC (vol. %))", cex=textsize),
+#      ylab=list("Frequency", cex=textsize),
+#      cex.axis =numsize, main=NULL)
+# legend("topright", legend= paste("n=",length(unique(p_plots$HSInumber)), sep=""), 
+#        cex=numsize, bty ="n")
+# putfigletter("C", location="topleft", x=NULL, y=NULL, offset=c(0, 0))
+# dev.off()
+# 
+# pdf(file = "../Plots/HSICalLib_20230316_volC_hist.pdf", width=8, height=8)
+# hist(p_plots$volC, 
+#      xlab=list("Soil Organic Carbon Content (OC) (vol. %)", cex=textsize), 
+#      ylab=list("Frequency", cex=textsize),
+#      cex.axis =numsize, main=NULL)
+# legend("topright", legend= paste("n=",length(unique(p_plots$HSInumber)), sep=""), 
+#        cex=textsize, bty ="n")
+# putfigletter("B", location="topleft", x=NULL, y=NULL, offset=c(0, 0))
+# dev.off()
+# 
+# pdf(file = "../Plots/HSICalLib_20230316_wtC_hist.pdf", width=8, height=8)
+# hist(p_plots$OC, 
+#      xlab=list("Soil Organic Carbon Concentration (OC) (wt. %)", cex=textsize),
+#      ylab=list("Frequency", cex=textsize),
+#      cex.axis =numsize, main=NULL)
+# legend("topright", legend= paste("n=",length(unique(p_plots$HSInumber)), sep=""), 
+#        cex=textsize, bty ="n")
+# putfigletter("A", location="topleft", x=NULL, y=NULL, offset=c(0, 0))
+# dev.off()
+# 
+# pdf(file = "../Plots/HSICalLib_20230316_packeddensity_hist.pdf", width=8, height=8)
+# hist(p_plots$HSIPackedDensity, 
+#      xlab=list(expression("Packed Density in Sample Well (g/cm"^"3"*")"), cex=textsize),
+#      ylab=list("Frequency", cex=textsize),
+#      cex.axis =numsize, main=NULL)
+# legend("topright", legend= paste("n=",length(unique(p_plots$HSInumber)), sep=""), 
+#        cex=textsize, bty ="n")
+# putfigletter("D", location="topleft", x=NULL, y=NULL, offset=c(0, 0))
+# dev.off()
+# 
+# # ----------
+# # texture
+# 
+# pdf(file = "../Plots/HSICalLib_20230316_sand_hist.pdf", width=8, height=8)
+# hist(p_plots$sandTotal, 
+#      xlab=list("Total Sand (%)", cex=textsize),
+#      ylab=list("Frequency", cex=textsize),
+#      cex.axis =numsize, main=NULL)
+# legend("topright", legend= paste("n=",length(unique(p_plots$HSInumber)), sep=""), 
+#        cex=textsize, bty ="n")
+# putfigletter("A", location="topleft", x=NULL, y=NULL, offset=c(0, 0))
+# dev.off()
+# 
+# pdf(file = "../Plots/HSICalLib_20230316_silt_hist.pdf", width=8, height=8)
+# hist(p_plots$siltTotal, 
+#      xlab=list("Total Silt (%)", cex=textsize),
+#      ylab=list("Frequency", cex=textsize),
+#      cex.axis =numsize, main=NULL)
+# legend("topright", legend= paste("n=",length(unique(p_plots$HSInumber)), sep=""), 
+#        cex=textsize, bty ="n")
+# putfigletter("B", location="topleft", x=NULL, y=NULL, offset=c(0, 0))
+# dev.off()
+# 
+# pdf(file = "../Plots/HSICalLib_20230316_clay_hist.pdf", width=8, height=8)
+# hist(p_plots$clayTotal, 
+#      xlab=list("Total Clay (%)", cex=textsize),
+#      ylab=list("Frequency", cex=textsize),
+#      cex.axis =numsize, main=NULL)
+# legend("topright", legend= paste("n=",length(unique(p_plots$HSInumber)), sep=""), 
+#        cex=textsize, bty ="n")
+# putfigletter("C", location="topleft", x=NULL, y=NULL, offset=c(0, 0))
+# dev.off()
+
+# ---------------------------------------------------------------------------
+# Best fit lines for OC validation plots panels B & D
+# ---------------------------------------------------------------------------
+
+# ----------
+# fit a line at each slope for obsI (panel B)
+
+fit1_obs <- lm(observed ~ predicted, data=sstatdf_obs[which(sstatdf_obs$slope==10),])
+fit2_obs <- lm(observed ~ predicted, data=sstatdf_obs[which(sstatdf_obs$slope==20),])
+fit3_obs <- lm(observed ~ predicted, data=sstatdf_obs[which(sstatdf_obs$slope==30),])
+fit4_obs <- lm(observed ~ predicted, data=sstatdf_obs[which(sstatdf_obs$slope==40),])
+fit5_obs <- lm(observed ~ predicted, data=sstatdf_obs[which(sstatdf_obs$slope==50),])
+fit6_obs <- lm(observed ~ predicted, data=sstatdf_obs[which(sstatdf_obs$slope==60),])
+
+# ----------
+# fit a line at each slope for dIc (panel D)
+
+fit1_dIc <- lm(observed ~ predicted, data=sstatdf_dIc[which(sstatdf_dIc$slope==10),])
+fit2_dIc <- lm(observed ~ predicted, data=sstatdf_dIc[which(sstatdf_dIc$slope==20),])
+fit3_dIc <- lm(observed ~ predicted, data=sstatdf_dIc[which(sstatdf_dIc$slope==30),])
+fit4_dIc <- lm(observed ~ predicted, data=sstatdf_dIc[which(sstatdf_dIc$slope==40),])
+fit5_dIc <- lm(observed ~ predicted, data=sstatdf_dIc[which(sstatdf_dIc$slope==50),])
+fit6_dIc <- lm(observed ~ predicted, data=sstatdf_dIc[which(sstatdf_dIc$slope==60),])
+
+# ----------
+# number of components for PLSRref and PLSR cor
+nc_ref <- 8
+nc_dIc <- 8
+
+# ---------------------------------------------------------------------------
+# Setup matrix for 4 panel OC validation plots
+# ---------------------------------------------------------------------------
+
+pdf(file = paste("../Plots/HSICalLib_20230614_OCvalidationplots_final.pdf", 
+                  sep=""), width=12, height=12)
+
+layout(matrix(c(1, 2, 3, 4), nrow=2, ncol=2, byrow=TRUE))
+
+# ---------------------------------------------------------------------------
+# PLSR evaluated with reference training & obs test
+# ---------------------------------------------------------------------------
+
+# ----------
+# ref
+
+# r2 <- round(sstatdf_tr_ref$R2[1], digits=3)
+# 
+# pdf(file = paste("../Plots/HSICalLib_20230320_PLSR_log10volC_train_refI.pdf", 
+#                  sep=""), width=8, height=8)
+
+par(mar=c(3,5.35,2,2)) #bottom, left, top, right
+plot(observed ~ predicted, data=sstatdf_tr_ref,
+     ylim=c(-4,0), xlim=c(-4,0),
+     col="black", cex.axis =numsize,
+     xlab=NA,
+     ylab = list( expression("Observed log[SOC (g/cm"^{3}~")"~"]") ,cex=textsize) )
+abline(a=0,b=1, lty=2) # 1:1 line
+legend("topleft", inset=c(0.02,0.02) , 
+       legend=c(paste("RMSE = ",round(sstatdf_tr_ref$RMSE[1], digits=2)),
+                expression("R"^{2}~"="~"0.65"), # update manually
+                paste("n = ",nrow(sstatdf_tr_ref)),
+                paste("ncomp = ",nc_ref) ), cex=legtextsize, bty ="n")
+legend("bottomright", 
+       legend=expression(paste("0", degree," Slope (Reference)", sep="")), 
+       cex=legtextsize, bty="n", pch=1, col = "black")
+
+legend("topright", inset=c(0.12,0.01), legend="1:1", cex=legtextsize, bty="n")
+putfigletter("A", font=2, cex=figlettersize, x=figletterx+0.12, y=figlettery-0.02, offset=c(0, 0))
+
+#dev.off()
+
+# ----------
+# obs
+
+# r2 <- round(sstatdf_obs$R2[1], digits=3)
+
+# pdf(file = paste("../Plots/HSICalLib_20230320_PLSR_logvolC_refItrain_obsItest.pdf", 
+#                 sep=""), width=8, height=8)
+
+par(mar=c(3,3,2,2)) #bottom, left, top, right
+plot(observed ~ predicted, data=sstatdf_obs, cex.axis=numsize,
+     xlab=NA, ylab=NA,
+     ylim=c(-4,0), xlim=c(-4,0),
+     col=spalette[factor(sstatdf_obs$slope)] ) 
+abline(a=0,b=1, lty=2) # 1:1 line
+abline(fit1_obs, col=spalette[1])
+abline(fit2_obs, col=spalette[2])
+abline(fit3_obs, col=spalette[3])
+abline(fit4_obs, col=spalette[4])
+abline(fit5_obs, col=spalette[5])
+abline(fit6_obs, col=spalette[6])
+legend("topleft", inset=c(0.02,0.02), 
+       legend=c(paste("RMSE = " , round(sstatdf_obs$RMSE[1], digits=2)),
+                expression("R"^{2}~"="~"0.44"), # update manually
+                paste("n = ", nrow(sstatdf_obs)),
+                paste("ncomp = ",nc_ref) ), cex=legtextsize, bty ="n")
+
+color.legend(-0.85,-3.75,-0.6,-2.75,c(expression(paste(" 10",degree))
+                              ," Slope",
+                              expression(paste(" 60",degree))),
+             rect.col=spalette,
+             gradient="y",align="rb",cex=legtextsize-0.2)
+
+legend("topright", inset=c(0.12,0.01), legend="1:1", cex=legtextsize, bty="n")
+
+putfigletter("B", font=2, cex=figlettersize, x=figletterx+0.05, y=figlettery-0.02, offset=c(0, 0))
+
+#dev.off()
+
+# ---------------------------------------------------------------------------
+# PLSR evaluated with 1 orientation corrected training & corrected test
+# ---------------------------------------------------------------------------
+
+#r2 <- round(sstatdf_tr_dIc$R2[1], digits=3)
+
+# ----------
+# train using dIc, 1 orientation for each sample 
+
+# pdf(file = paste("../Plots/HSICalLib_20230316_PLSR_logvolC_train_dIc_singleobservation.pdf", 
+#                  sep=""), width=8, height=8)
+
+par(mar=c(5,5.35,1,2)) #bottom, left, top, right
+plot(observed ~ predicted, data=sstatdf_tr_dIc,
+     ylim=c(-4,0), xlim=c(-4,0),
+     col=spalette[factor(sstatdf_tr_dIc$slope)], cex.axis=numsize,
+     xlab = list( expression("Predicted log[SOC (g/cm"^{3}~")"~"]") ,cex=textsize), 
+     ylab = list( expression("Observed log[SOC (g/cm"^{3}~")"~"]") ,cex=textsize) )
+abline(a=0,b=1, lty=2) # 1:1 line
+legend("topleft", inset=c(0.02,0.02) , 
+       legend=c(paste("RMSE = ",round(sstatdf_tr_dIc$RMSE[1], digits=2)),
+                expression("R"^{2}~"="~"0.58"), # update manually
+                paste("n = ",nrow(sstatdf_tr_dIc)),
+                paste("ncomp = ",nc_dIc) ), cex=legtextsize, bty ="n")
+
+legend("topright", inset=c(0.12,0.01), legend="1:1", cex=legtextsize, bty="n")
+putfigletter("C", font=2, cex=figlettersize, x=figletterx+0.12, y=figlettery+0.01, offset=c(0, 0))
+
+#dev.off()
+
+# ----------
+# evaluate using dIc, all orientations
+
+#r2 <- round(sstatdf_dIc$R2[1], digits=3)
+
+#pdf(file = paste("../Plots/HSICalLib_20230316_PLSR_logvolC_train_dIc_singleobservation_test_dIc_all.pdf", 
+#                 sep=""), width=8, height=8)
+
+par(mar=c(5,3,1,2)) #bottom, left, top, right
+plot(observed ~ predicted, data=sstatdf_dIc, cex.axis=numsize,
+     xlab=list( expression("Predicted log[SOC (g/cm"^{3}~")"~"]") ,cex=textsize), 
+     ylab=NA,
+     ylim=c(-4,0), xlim=c(-4,0),
+     col=spalette[factor(sstatdf_dIc$slope)] ) 
+abline(fit1_dIc, col=spalette[1])
+abline(fit2_dIc, col=spalette[2])
+abline(fit3_dIc, col=spalette[3])
+abline(fit4_dIc, col=spalette[4])
+abline(fit5_dIc, col=spalette[5])
+abline(fit6_dIc, col=spalette[6])
+abline(a=0,b=1, lty=2) # 1:1 line
+
+legend("topleft", inset=c(0.02,0.02) , 
+       legend=c(paste("RMSE = ",round(sstatdf_dIc$RMSE[1], digits=2)),
+                expression("R"^{2}~"="~"0.57"), # update manually
+                paste("n = ",nrow(sstatdf_dIc)),
+                paste("ncomp = ",nc_dIc) ), cex=legtextsize, bty ="n")
+
+legend("topright", inset=c(0.12,0.01), legend="1:1", cex=legtextsize, bty="n")
+
+putfigletter("D", font=2, cex=figlettersize, x=figletterx+0.05, y=figlettery+0.01, offset=c(0, 0))
+
+#dev.off()
+
+dev.off()
+
+# ---------------------------------------------------------------------------
+# Setup layout for 4 panel OC boxplots
+# ---------------------------------------------------------------------------
+
+pdf(file = paste("../Plots/HSICalLib_20230614_globaldI_summarystats_OC_boxplots_final.pdf", sep="") ,
+    width=12, height=12)
+
+layout(matrix(c(1, 2, 3,3, 4,4), nrow=3, ncol=2, byrow=TRUE))
+
+# ---------------------------------------------------------------------------
+# Boxplots with summarystats_OC
+# ---------------------------------------------------------------------------
+
+# --- RMSE vs slope boxplot
+
+# pdf(file = paste("../Plots/HSICalLib_20230320_globaldI_",
+#                  "summarystats_OC_RMSEvsslope_boxplot.pdf", sep="") ,
+#     width=8, height=8)
+
+par(mar=c(5,5.5,3,2), mgp=c(3.6,1.4,0)) #bottom, left, top, right
+boxplot(RMSE_obs~slope, data=summarystats_OC, col=uncol, boxwex=0.4, 
+        ylim=c(0.2,0.6), outcol=uncol,
+        cex.axis=numsize+0.5, 
+        outpch=".", 
+        #notch=TRUE,
+        xlab = list(expression("Slope ("~degree~")"), cex=textsize+0.5), 
+        #ylab = list("RMSE Predicted log(OC) - Observed log(OC) (vol%)", cex=textsize))
+        ylab = list("RMSE", cex=textsize+0.5))
+boxplot(RMSE_dIc~slope, data=summarystats_OC, col="purple", add=T, boxwex=0.4, 
+        at = 1:length(unique(summarystats_OC$slope))+0.45, axes=FALSE,
+        outpch=".", outcol=opalette[2],
+        #notch=TRUE, 
+        xaxt="n")
+
+legend("topleft", 
+       legend=c("PLSR ref (Uncorrected)", 
+                expression(paste("PLSR cor (",Delta,"I+ Corrected)"))),
+       col=c('lightgrey',"purple"), pch=15, cex=legtextsize, bty ="n")
+putfigletter("A", font=2, cex=figlettersize+0.5, x=figletterx+0.08, y=figlettery+0.02, offset=c(0, 0))
+
+#dev.off()
+
+
+# --- NSE vs slope boxplot
+
+# pdf(file = paste("../Plots/HSICalLib_20230320_globaldI_",
+#                  "summarystats_OC_NSEvsslope_boxplot.pdf", sep="") ,
+#     width=8, height=8)
+
+par(mar=c(5,5.5,3,2), mgp=c(3.6,1.4,0)) #bottom, left, top, right
+boxplot(NSE_obs~slope, data=summarystats_OC, col=uncol, boxwex=0.3, 
+        ylim=c(-0.5,1),  outcol=uncol,
+        cex.axis=numsize+0.5, 
+        outpch=".", 
+        #notch=TRUE,
+        xlab = list(expression("Slope ("~degree~")"), cex=textsize+0.5), 
+        ylab = list("NSE", cex=textsize+0.5))
+boxplot(NSE_dIc~slope, data=summarystats_OC, col="purple", add=T, boxwex=0.3, 
+        at = 1:length(unique(summarystats_OC$slope))+0.45, axes=FALSE,
+        outpch=".", outcol=opalette[2], 
+        #notch=TRUE, 
+        xaxt="n")
+
+# legend("topleft", 
+#        legend=c("Uncorrected", 
+#                 expression(paste(Delta,"I Corrected = s+a+w+interactions"))),
+#        col=c(uncol,"purple"), pch=15, cex=1, bty ="n")
+putfigletter("B", font=2, cex=figlettersize+0.5, x=figletterx+0.08, y=figlettery+0.02, offset=c(0, 0))
+
+#dev.off()
+
+# ----------
+# RMSE vs aspect boxplot
+
+# pdf(file = paste("../Plots/HSICalLib_20230320_globaldI_",
+#                  "summarystats_OC_RMSEvsaspect_boxplot.pdf", sep="") ,
+#     width=8, height=8)
+
+par(mar=c(5,5.5,1,2), mgp=c(3.6,1.4,0)) #bottom, left, top, right
+boxplot(RMSE_obs~aspect, data=summarystats_OC, col=uncol, boxwex=0.3, 
+        ylim=c(0.2,0.6), outcol=uncol,
+        cex.axis=numsize+0.5, 
+        outpch=".", 
+        #notch=TRUE,
+        xlab = list(expression("Aspect ("~degree~")"), cex=textsize+0.5), 
+        #ylab = list("RMSE Predicted log(OC) - Observed log(OC) (vol%)", cex=textsize))
+        ylab = list("RMSE", cex=textsize+0.5))
+boxplot(RMSE_dIc~aspect, data=summarystats_OC, col="purple", add=T, boxwex=0.3, 
+        at = 1:length(unique(summarystats_OC$aspect))+0.45, axes=FALSE,
+        outpch=".", outcol=opalette[2],
+        #notch=TRUE, 
+        xaxt="n")
+
+# legend("topleft", 
+#        legend=c("Uncorrected", 
+#                 expression(paste(Delta,"I Corrected = s+a+w+interactions"))),
+#        col=c(uncol,"purple"), pch=15, cex=1, bty ="n")
+putfigletter("C", font=2, cex=figlettersize+0.5, x=figletterx+0.01, y=figlettery-0.02, offset=c(0, 0))
+
+#dev.off()
+
+# --- NSE vs aspect boxplot
+
+# pdf(file = paste("../Plots/HSICalLib_20230320_globaldI_",
+#                  "summarystats_OC_NSEvsaspect_boxplot.pdf", sep="") ,
+#     width=8, height=8)
+
+par(mar=c(5,5.5,1,2), mgp=c(3.6,1.4,0)) 
+#mar=c(bottom, left, top, right) 
+#mgp=c(axis.title.position, axis.label.position, axis.line.position)
+boxplot(NSE_obs~aspect, data=summarystats_OC, col=uncol, boxwex=0.3, 
+        ylim=c(-0.5,1),
+        cex.axis=numsize+0.5, 
+        outpch=".", outcol=uncol,
+        #notch=TRUE,
+        xlab = list(expression("Aspect ("~degree~")"), cex=legtextsize+0.5), 
+        ylab = list("NSE", cex=textsize+0.5))
+boxplot(NSE_dIc~aspect, data=summarystats_OC, col="purple", add=T, boxwex=0.3, 
+        at = 1:length(unique(summarystats_OC$aspect))+0.45, axes=FALSE,
+        outpch=".", outcol=opalette[2],
+        #notch=TRUE, 
+        xaxt="n")
+
+# legend("topleft", 
+#        legend=c("Uncorrected", 
+#                 expression(paste(Delta,"I Corrected = s+a+w+interactions"))),
+#        col=c(uncol,"purple"), pch=15, cex=1, bty ="n")
+putfigletter("D", font=2, cex=figlettersize+0.5, x=figletterx+0.01, y=figlettery-0.02, offset=c(0, 0))
+
+#dev.off()
+
+dev.off()
+
+# ---------------------------------------------------------------------------
+# 
+# ---------------------------------------------------------------------------
+
+
+# ---------------------------------------------------------------------------
+# 
+# ---------------------------------------------------------------------------
+
